@@ -26,6 +26,12 @@ Potentiometer duration, offset;
 Button makeFireNow;
 Button resetCounter;
 
+// Frequency buttons
+#include "ButtonGroup.h"
+#define NUM_FREQUENCY_BUTTONS 5
+const byte FREQUENCY_PINS[NUM_FREQUENCY_BUTTONS] = {2, 3, 4, 5, 6};
+ButtonGroup frequency;
+
 // Web Portal
 #include "Portal.h"
 
@@ -59,8 +65,11 @@ void setup() {
   showMakeFireNow(makeFireNow.getState());
   resetCounter.begin(BUTTON_PIN2);
 
+  frequency.begin(FREQUENCY_PINS, NUM_FREQUENCY_BUTTONS, MIDI_CLOCKS_PER_BEAT/SCALE, MIDI_CLOCKS_PER_BEAT*SCALE);
+  showFrequency(frequency.getValue());
+
   // web portal
-  Serial.println("Configuring access point...");
+  Serial.println("Launching access point and web portal...");
   portal.begin();
   Serial.print("IP address: ");
   Serial.println(portal.getIp());
@@ -76,6 +85,10 @@ void loop() {
   if ( duration.update() ) {
     // have a change in duration
     showDuration(duration.getSector());
+  }
+  if ( frequency.update() ) {
+    midi.setClocksPerTrigger(frequency.getValue());
+    showFrequency(frequency.getValue());
   }
   if (portal.getOffset() != midiDelay) {
     // web portal has changed offset
@@ -100,20 +113,22 @@ void loop() {
     fireLeft.off();
     fireRight.off();
   }  
-  // if we have a MIDI update and we're not manually firing, do stuff.
+  // if we have a MIDI update, a firing frequency, and we're not manually firing, do stuff.
   if( midi.update() && !makeFireNow.getState()) {
 
     // we have a MIDI signal to follow
     byte counter = midi.getCounter();
 
+    byte midiClocksPerTrigger = midi.getClocksPerTrigger();
+
     // how far back from the poof do we need to trigger the hardware?
-    byte fireOnAt = (MIDI_CLOCKS_PER_BEAT - midiDelay) % MIDI_CLOCKS_PER_BEAT;
+    byte fireOnAt = (midiClocksPerTrigger - midiDelay) % midiClocksPerTrigger;
     
     // and when do we need to turn it off?
-    byte fireOffAt = (fireOnAt + duration.getSector()) % MIDI_CLOCKS_PER_BEAT;
+    byte fireOffAt = (fireOnAt + duration.getSector()) % midiClocksPerTrigger;
 
     // given the current counter and on/off times, should we shoot fire or not?
-    if( timeForFire( counter, fireOnAt, fireOffAt ) ) {
+    if( frequency.hasSelection() && timeForFire( counter, fireOnAt, fireOffAt ) ) {
       // turn on the fire
       fireLeft.on();
       fireRight.on();
@@ -124,7 +139,7 @@ void loop() {
     }
 
     // report tick, noting we do this after the hardware-level update
-    showMIDI(midi.getCounter());
+    showMIDI(midi.getBeatCounter());
   }
 
   // 4. override with the Make Fire Now button
@@ -310,6 +325,22 @@ void showOffset(byte count) {
 
   if ( startup ) {
     oled.buffer = "Off:  ";
+    showLabel(thisRow);
+    startup = false;
+  }
+  if ( lastCount != count ) {
+    lastCount = count;
+    showCounter(thisRow, 6, count);
+  }
+}
+
+void showFrequency(byte count) {
+  static byte lastCount = 255;
+  static boolean startup = true;
+  const byte thisRow = 3;
+
+  if ( startup ) {
+    oled.buffer = "Freq:  ";
     showLabel(thisRow);
     startup = false;
   }

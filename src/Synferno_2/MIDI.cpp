@@ -1,8 +1,5 @@
 #include "MIDI.h"
-#include <Streaming.h>
-
-// MIDI buffer and counter
-//SoftwareSerial MIDISerial(MIDI_RX_PIN, MIDI_TX_PIN);
+#include <Streaming.h> // TODO: can this be removed?
 
 void MIDI::begin() {
   // give MIDI-device a short time to "digest" MIDI messages
@@ -13,6 +10,7 @@ void MIDI::begin() {
   clockCounter = 255; // no MIDI signal; we're "off the clock".
   tickDuration = 20833; // us, 120 bpm
   beatDuration = 500; // ms, 120 bpm
+  midiClocksPerTrigger = MIDI_CLOCKS_PER_BEAT;
 }
 
 boolean MIDI::update() {
@@ -52,16 +50,28 @@ boolean MIDI::update() {
 }
 
 byte MIDI::getCounter() {
-  return ( clockCounter );
+  return clockCounter;
+}
+
+byte MIDI::getBeatCounter() {
+  return clockCounter % MIDI_CLOCKS_PER_BEAT;
 }
 
 void MIDI::resetCounter() {
   clockCounter = 0;
 }
 
+void MIDI::setClocksPerTrigger(byte ticks) {
+  this->clocksPerTrigger = ticks;
+}
+
+byte MIDI::getClocksPerTrigger() {
+  return this->clocksPerTrigger;
+}
+
 void MIDI::processTick() {
   // increment the clock
-  clockCounter = (clockCounter + 1) % MIDI_CLOCKS_PER_BEAT;
+  clockCounter = (clockCounter + 1) % (MIDI_CLOCKS_PER_BEAT * SCALE);
 
   // time the ticks
   static unsigned long lastTick = micros();
@@ -74,7 +84,7 @@ void MIDI::processTick() {
   tickDuration = (tickDuration*(smoothTick-1) + deltaTick)/smoothTick;
 
   // time the beats
-  if( clockCounter==0 ) {
+  if( clockCounter % MIDI_CLOCKS_PER_BEAT == 0 ) {
     // time the beats
     static unsigned long lastBeat = millis();
     unsigned long thisBeat = millis();

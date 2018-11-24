@@ -17,7 +17,9 @@
 
 #define MIDI_CLOCKS_PER_BEAT 24
 
-#define FREQUENCY_DEVIATION 4 // multiplier (for max) and divisor (for min) of beats per poof (must be 1 through 10)
+#define SCALE 4 // the highest multiplier of clock ticks we are interested in counting to.
+                // although there are 24 ticks per beat, if we want to trigger every four
+                // beats then we'll need to count up to MIDI_CLOCKS_PER_BEAT * SCALE
 
 #define SIMULATE_MIDI 0
 #define SIMULATE_BPM 120.0
@@ -28,15 +30,20 @@ class MIDI{
 
     boolean update(); // process MIDI messages.
 
-    byte getCounter(); // 0-23 ticks
+    byte getBeatCounter(); // 0 to MIDI_CLOCKS_PER_BEAT-1 ticks
+
+    byte getCounter(); // 0 to (MIDI_CLOCKS_PER_BEAT * SCALE) - 1 ticks
 
     void resetCounter(); // set counter back to 0
+
+    void setClocksPerTrigger(byte ticks);
+    byte getClocksPerTrigger();
 
     unsigned long tickLength(); // length of ticks, uS
     unsigned long beatLength();  // length of 24 ticks (one beat), ms
     
   private:
-    byte clockCounter;
+    byte clockCounter, clocksPerTrigger;
 
     unsigned long tickDuration, beatDuration;
     

@@ -25,6 +25,7 @@ boolean Portal::begin() {
   //ask server to track these headers
   this->server.collectHeaders(headerkeys, headerkeyssize);
   this->server.begin();
+  return true;
 }
 
 void Portal::update() {
