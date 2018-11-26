@@ -14,15 +14,17 @@ In the case of multiple simultanious presses, TODO
 
 class ButtonGroup{
   public:
-    void begin(byte pins[], byte numPins, byte minValue=0, byte maxValue=NUM_BUTTONS-1, boolean toggle=true, boolean pressedValue=LOW);
+    void begin(byte pins[], byte numPins, boolean toggle=true);
 
     boolean update();
 
-    byte getState();
+    byte getValue();
+
+    boolean hasSelection();
     
   private:
-    byte pressedValues[], currentStates[], pins[], selected;
-    Bounce buttons[];
+    byte numPins, toggle, currentSelected;
+    Bounce* buttons;
 };
 
 #endif

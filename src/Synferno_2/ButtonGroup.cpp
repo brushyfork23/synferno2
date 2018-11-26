@@ -1,8 +1,10 @@
 #include "ButtonGroup.h"
 
-void ButtonGroup::begin(byte pins[], byte numPins, byte minValue, byte maxValue, boolean toggle, boolean pressedValue) {
+void ButtonGroup::begin(byte pins[], byte numPins, boolean toggle) {
 
   this->numPins = numPins;
+
+  this->toggle = toggle;
 
   this->buttons = new Bounce[numPins];
   for (int i = 0; i < numPins; i++) {
@@ -39,8 +41,8 @@ boolean ButtonGroup::update() {
   return false; // no selection was made or re-press does not de-select due to toggle state.
 }
 
-byte ButtonGroup::getState() {
-  return( this->currentState );
+byte ButtonGroup::getValue() {
+  return( this->currentSelected );
 }
 
 boolean ButtonGroup::hasSelection() {

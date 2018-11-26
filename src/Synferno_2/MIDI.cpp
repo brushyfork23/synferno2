@@ -10,7 +10,7 @@ void MIDI::begin() {
   clockCounter = 255; // no MIDI signal; we're "off the clock".
   tickDuration = 20833; // us, 120 bpm
   beatDuration = 500; // ms, 120 bpm
-  midiClocksPerTrigger = MIDI_CLOCKS_PER_BEAT;
+  clocksPerTrigger = MIDI_CLOCKS_PER_BEAT;
 }
 
 boolean MIDI::update() {

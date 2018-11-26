@@ -29,7 +29,7 @@ Button resetCounter;
 // Frequency buttons
 #include "ButtonGroup.h"
 #define NUM_FREQUENCY_BUTTONS 5
-const byte FREQUENCY_PINS[NUM_FREQUENCY_BUTTONS] = {2, 3, 4, 5, 6};
+byte FREQUENCY_PINS[NUM_FREQUENCY_BUTTONS] = {2, 3, 4, 5, 6};
 ButtonGroup frequency;
 
 // Web Portal
@@ -65,7 +65,7 @@ void setup() {
   showMakeFireNow(makeFireNow.getState());
   resetCounter.begin(BUTTON_PIN2);
 
-  frequency.begin(FREQUENCY_PINS, NUM_FREQUENCY_BUTTONS, MIDI_CLOCKS_PER_BEAT/SCALE, MIDI_CLOCKS_PER_BEAT*SCALE);
+  frequency.begin(FREQUENCY_PINS, NUM_FREQUENCY_BUTTONS);
   showFrequency(frequency.getValue());
 
   // web portal
@@ -87,7 +87,7 @@ void loop() {
     showDuration(duration.getSector());
   }
   if ( frequency.update() ) {
-    midi.setClocksPerTrigger(frequency.getValue());
+    midi.setClocksPerTrigger(map(frequency.getValue(), 0, NUM_FREQUENCY_BUTTONS, MIDI_CLOCKS_PER_BEAT/SCALE, MIDI_CLOCKS_PER_BEAT*SCALE));
     showFrequency(frequency.getValue());
   }
   if (portal.getOffset() != midiDelay) {
