@@ -14,7 +14,7 @@ In the case of multiple simultanious presses, TODO
 
 class ButtonGroup{
   public:
-    void begin(byte pins[], byte numPins, boolean toggle=true);
+    void begin(byte numPins, byte button_pins[], byte led_pins[], boolean toggle=true);
 
     boolean update();
 

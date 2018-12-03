@@ -1,6 +1,6 @@
 #include "ButtonGroup.h"
 
-void ButtonGroup::begin(byte pins[], byte numPins, boolean toggle) {
+void ButtonGroup::begin(byte numPins, byte button_pins[], byte led_pins[], boolean toggle) {
 
   this->numPins = numPins;
 
@@ -8,8 +8,10 @@ void ButtonGroup::begin(byte pins[], byte numPins, boolean toggle) {
 
   this->buttons = new Bounce[numPins];
   for (int i = 0; i < numPins; i++) {
-    this->buttons[i].attach( pins[i] , INPUT_PULLUP  );
+    this->buttons[i].attach( button_pins[i] , INPUT_PULLUP  );
     this->buttons[i].interval(25);
+
+    // TODO: initialize LED pins
   }
 
   this->update();

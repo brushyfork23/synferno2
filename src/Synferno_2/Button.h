@@ -2,12 +2,11 @@
 #define Button_h
 
 #include <Arduino.h>
-
 #include <Metro.h>
 
 // pins
-#define BUTTON_PIN1 7
-#define BUTTON_PIN2 12
+#define POOF_BOTH_BUTTON_PIN 0
+#define RESET_BUTTON_PIN 19
 
 class Button{
   public:

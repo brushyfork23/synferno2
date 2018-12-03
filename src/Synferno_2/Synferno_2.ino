@@ -1,11 +1,25 @@
 
 // Compile for Sparkfun ESP32 Thing
 
+// Sparkfun ESP32 Thing: https://cdn.sparkfun.com/assets/learn_tutorials/5/0/7/esp32-thing-graphical-datasheet-v02.png
+// Adafruit Monochrome 1.3" 128x64 OLED graphic display SSD1306: https://www.adafruit.com/product/938
+// MIDI Breakout Board: https://smile.amazon.com/gp/product/B00YDLVLVO
+// IRF520 MOSFET Driver Module: https://smile.amazon.com/gp/product/B06XHH1TQM
+// 12V / 5V DC Buck Converter: https://smile.amazon.com/gp/product/B01MEESLZ6
+// 12V 10A Power Supply: https://smile.amazon.com/gp/product/B00Z9X4GLW
+
+// 21 to OLED `Data`
+// 22 to OLED `Clk`
+// 16 to MIDI `tx`
+// 17 to MIDI `rx`
+// 13 to left solenoid MOSFET Driver Module `SIG`
+// VUSB to Buck Converter `+5`
+
+
 #include <Streaming.h>
 #include <Metro.h>
 
 // OLED
-#include <U8x8lib.h>
 #include "OLED.h"
 OLED oled;
 
@@ -29,7 +43,8 @@ Button resetCounter;
 // Frequency buttons
 #include "ButtonGroup.h"
 #define NUM_FREQUENCY_BUTTONS 5
-byte FREQUENCY_PINS[NUM_FREQUENCY_BUTTONS] = {2, 3, 4, 5, 6};
+byte FREQUENCY_BUTTON_PINS[NUM_FREQUENCY_BUTTONS] = {4, 2, 15, 18, 23};
+byte FREQUENCY_LED_PINS[NUM_FREQUENCY_BUTTONS] = {14, 27, 26, 25, 33};
 ButtonGroup frequency;
 
 // Web Portal
@@ -61,11 +76,11 @@ void setup() {
   showOffset(offset.getSector());
 
   // buttons
-  makeFireNow.begin(BUTTON_PIN1);
+  makeFireNow.begin(POOF_BOTH_BUTTON_PIN);
   showMakeFireNow(makeFireNow.getState());
-  resetCounter.begin(BUTTON_PIN2);
+  resetCounter.begin(RESET_BUTTON_PIN);
 
-  frequency.begin(FREQUENCY_PINS, NUM_FREQUENCY_BUTTONS);
+  frequency.begin(NUM_FREQUENCY_BUTTONS, FREQUENCY_BUTTON_PINS, FREQUENCY_LED_PINS);
   showFrequency(frequency.getValue());
 
   // web portal
@@ -359,3 +374,4 @@ void showCounter(byte row, byte col, int counter) {
   if ( oled.buffer.length() < 2 ) oled.buffer += " ";
   oled.write(row, col); // don't pad, place at a specific location
 }
+

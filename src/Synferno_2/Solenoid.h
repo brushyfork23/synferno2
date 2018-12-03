@@ -3,8 +3,8 @@
 
 #include <Arduino.h>
 
-#define SOLENOID_PIN1 4
-#define SOLENOID_PIN2 5
+#define SOLENOID_PIN1 13
+#define SOLENOID_PIN2 12
 
 /* 
  * When the solenoid (an inductor) is powered up, it pulls significantly more (3x?) amperage than the

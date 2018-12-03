@@ -5,8 +5,8 @@
 
 #include <Metro.h>
 
-#define POT_PIN1 A0 // A0, specifically
-#define POT_PIN2 1
+#define POT_PIN1 36
+#define POT_PIN2 37
 
 // ~2230 updates per second with FASTADC 0
 // ~6220 updates per second with FASTADC 1

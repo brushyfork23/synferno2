@@ -1,9 +1,8 @@
 #ifndef OLED_h
 #define OLED_h
 
-#include <Arduino.h>
-
-#include <U8x8lib.h>
+#include <Wire.h>
+#include "SSD1306.h"
 
 class OLED{
   public:

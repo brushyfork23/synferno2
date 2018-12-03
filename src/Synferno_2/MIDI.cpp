@@ -3,7 +3,6 @@
 
 void MIDI::begin() {
   // give MIDI-device a short time to "digest" MIDI messages
-  //MIDISerial.begin(31250);
   Serial1.begin(31250);
   delay(100);
 
