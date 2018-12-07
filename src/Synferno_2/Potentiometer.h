@@ -5,8 +5,8 @@
 
 #include <Metro.h>
 
-#define POT_PIN1 36
-#define POT_PIN2 37
+#define POT_PIN1 32
+#define POT_PIN2 34
 
 // ~2230 updates per second with FASTADC 0
 // ~6220 updates per second with FASTADC 1
@@ -38,3 +38,4 @@ class Potentiometer{
 };
 
 #endif
+

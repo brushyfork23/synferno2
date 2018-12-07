@@ -8,7 +8,7 @@ void Potentiometer::begin(byte pin, byte sectors, word minimum, word maximum, by
   this->maximum = maximum;
   this->sectors = sectors;
 
-  pinMode(this->pin, INPUT_PULLUP);
+  pinMode(this->pin, INPUT);
 
   this->currentValue = analogRead(pin);
   if( sectors > 0 ) this->currentSector = map(this->currentValue, this->minimum, this->maximum, 0, (this->sectors - 1));
@@ -22,6 +22,7 @@ boolean Potentiometer::update() {
   updateInterval.reset();
 
   // take a reading
+  analogRead(pin); // toss first reading to ignore noise
   word newValue = analogRead(pin);
 
   // update with exponential smoothing
@@ -64,4 +65,5 @@ word Potentiometer::getValue() {
 byte Potentiometer::getSector() {
   return ( this->currentSector );
 }
+
 

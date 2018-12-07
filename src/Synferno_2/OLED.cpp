@@ -1,14 +1,15 @@
 #include "OLED.h"
 
-// 21 == SDA
-// 22 == SCL
-SSD1306  display(0x3D, 21, 22);
+// A4 == SDA
+// A5 == SCL
+U8X8_SSD1306_128X64_NONAME_4W_SW_SPI SSD1306(/* clock=*/ 22, /* data=*/ 21, /* cs=*/ 15, /* dc=*/ 18); 
 
 void OLED::begin() {
-  display.init();
+  SSD1306.begin();
+  SSD1306.setPowerSave(0);
 
-  display.flipScreenVertically();
-  display.setFont(ArialMT_Plain_8);
+  // provides 8 rows and 16 characters at these settings
+  SSD1306.setFont(u8x8_font_chroma48medium8_r);
 
   this->buffer.reserve(16);
   this->buffer = "*              *";
@@ -23,8 +24,8 @@ void OLED::write(byte row, byte col, boolean pad) {
     while( this->buffer.length() < (16-col) ) this->buffer += " ";
   }
   
-  display.drawString(col, row * 8, this->buffer);
-  display.display();
+  static char s[16];
+  this->buffer.toCharArray(s, 16);  
+  SSD1306.drawString(col, row, s);
 }
-
 

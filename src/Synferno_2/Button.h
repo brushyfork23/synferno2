@@ -6,7 +6,7 @@
 
 // pins
 #define POOF_BOTH_BUTTON_PIN 0
-#define RESET_BUTTON_PIN 19
+#define RESET_BUTTON_PIN 34
 
 class Button{
   public:

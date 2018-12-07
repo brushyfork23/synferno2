@@ -1,8 +1,7 @@
 #ifndef OLED_h
 #define OLED_h
 
-#include <Wire.h>
-#include "SSD1306.h"
+#include <U8x8lib.h>
 
 class OLED{
   public:
@@ -16,3 +15,5 @@ class OLED{
 };
 
 #endif
+
+

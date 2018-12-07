@@ -2,12 +2,6 @@
 
 void Potentiometer::begin(byte pin, byte sectors, word minimum, word maximum, byte smoothing) {
 
-#if FASTADC
-  // set ADC prescale to 16
-  sbi(ADCSRA, ADPS2) ;
-  cbi(ADCSRA, ADPS1) ;
-  cbi(ADCSRA, ADPS0) ;
-#endif
 
   this->pin = pin;
   this->smoothing = smoothing;

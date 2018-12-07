@@ -5,23 +5,16 @@
 
 // Potentiometers
 #include "Potentiometer.h"
-Potentiometer duration, offset, frequency, options;
-
-#define FREQUENCY_SECTORS 5   // number of frequency options (keep odd so knob at 12:00 means default)
-#define FREQUENCY_DEVIATION 4 // multiplier (for max) and divisor (for min) of beats per poof (must be 1 through 10)
+Potentiometer duration, offset;
 
 #define MIDI_CLOCKS_PER_BEAT 24 // from
-
-#define NUM_OPTIONS 6
 
 void setup() {
   Serial.begin(115200);
 
   // knobs
-  duration.begin(POT_PIN1, MIDI_CLOCKS_PER_BEAT, 13, 360);
-  offset.begin(POT_PIN2, MIDI_CLOCKS_PER_BEAT, 14, 235);
-  frequency.begin(POT_PIN3, FREQUENCY_SECTORS, 14, 553);
-  options.begin(POT_PIN4, NUM_OPTIONS, 14, 553);
+  duration.begin(POT_PIN1, 12, 0, 7000);
+  offset.begin(POT_PIN2, MIDI_CLOCKS_PER_BEAT, 0, 7000);
 
 }
 
@@ -29,8 +22,6 @@ void loop() {
 
   duration.update();
   offset.update();
-  frequency.update();
-  options.update();
 
   static Metro printEvery(50UL);
   if ( printEvery.check() ) {
@@ -41,7 +32,7 @@ void loop() {
 
     printEvery.reset();
 
-    Serial << duration.getSector() << "\t" << offset.getSector() << "\t" << frequency.getSector() << "\t" << options.getSector() << endl;
+    Serial << duration.getSector() << "\t" << duration.getValue() << "\t" << offset.getSector() << "\t" << offset.getValue() << endl;
   }
 
 }

@@ -14,6 +14,12 @@
 // 17 to MIDI `rx`
 // 13 to left solenoid MOSFET Driver Module `SIG`
 // VUSB to Buck Converter `+5`
+// 10k ohm resister between 39 and +3.3
+// 10k ohm resister between 38 and +3.3
+// 10k ohm resister between 37 and +3.3
+// 10k ohm resister between 36 and +3.3
+// 10k ohm resister between 35 and +3.3
+// 10k ohm resister between 34 and +3.3
 
 
 #include <Streaming.h>
@@ -43,7 +49,7 @@ Button resetCounter;
 // Frequency buttons
 #include "ButtonGroup.h"
 #define NUM_FREQUENCY_BUTTONS 5
-byte FREQUENCY_BUTTON_PINS[NUM_FREQUENCY_BUTTONS] = {4, 2, 15, 18, 23};
+byte FREQUENCY_BUTTON_PINS[NUM_FREQUENCY_BUTTONS] = {35, 36, 37, 38, 39};
 byte FREQUENCY_LED_PINS[NUM_FREQUENCY_BUTTONS] = {14, 27, 26, 25, 33};
 ButtonGroup frequency;
 
@@ -69,10 +75,10 @@ void setup() {
   showFireRight(fireRight.getState());
 
   // knobs
-  duration.begin(POT_PIN1, 12, 13, 340);
+  duration.begin(POT_PIN1, 12, 0, 4200);
   showDuration(duration.getSector());
 
-  offset.begin(POT_PIN2, MIDI_CLOCKS_PER_BEAT, 14, 545);
+  offset.begin(POT_PIN2, MIDI_CLOCKS_PER_BEAT, 0, 4200);
   showOffset(offset.getSector());
 
   // buttons
@@ -95,7 +101,7 @@ void setup() {
 void loop() {
   // 1. handle web portal
   portal.update();
-
+  
   // 2. update the inputs
   if ( duration.update() ) {
     // have a change in duration
@@ -108,6 +114,7 @@ void loop() {
   if (portal.getOffset() != midiDelay) {
     // web portal has changed offset
     midiDelay = portal.getOffset();
+    showOffset(midiDelay);
   }
   if ( offset.update() ) {
     // console has changed offset.  Override web portal settings
@@ -223,6 +230,64 @@ void manualFiring(boolean doFire) {
     fireRight.off();
   }
 }
+
+// void showFireLeft(boolean state) {
+//    static boolean lastState = !state;
+
+//   if ( lastState != state ) {
+//     lastState = state;
+//     if ( state ) {
+//       oled.solLeft = "F";
+//     }
+//     else {
+//       oled.solLeft = ".";
+//     }
+//   }
+// }
+
+// void showFireRight(boolean state) {
+//   static boolean lastState = !state;
+
+//   if ( lastState != state ) {
+//     lastState = state;
+//     if ( state ) {
+//       oled.solRight = "F";
+//     }
+//     else {
+//       oled.solRight = ".";
+//     }
+//   }
+// }
+
+// void showMakeFireNow(boolean state) {
+//   static boolean lastState = !state;
+
+//   if ( lastState != state ) {
+//     lastState = state;
+//     if ( state ) {
+//       oled.mfn = "X";
+//     }
+//     else {
+//       oled.mfn = ".";
+//     }
+//   }
+// }
+
+// void showMIDI(byte count) {
+//   oled.midi = count;
+// }
+
+// void showDuration(byte count) {
+//   oled.duration = count;
+// }
+
+// void showOffset(byte count) {
+//   oled.offset = count;
+// }
+
+// void showFrequency(byte count) {
+//   oled.freq = count;
+// }
 
 // the OLED display is hella-slow, so we want to be careful about how much we print there.
 // much of this code is just being "smart" about updating the OLED.
@@ -349,13 +414,29 @@ void showOffset(byte count) {
   }
 }
 
-void showFrequency(byte count) {
-  static byte lastCount = 255;
+void showFrequency(int step) {
+  static int lastStep = 0;
   static boolean startup = true;
   const byte thisRow = 3;
 
   if ( startup ) {
-    oled.buffer = "Freq:  ";
+    oled.buffer = "Freq: ";
+    showLabel(thisRow);
+    startup = false;
+  }
+  if ( lastStep != step ) {
+    lastStep = step;
+    showCounter(thisRow, 6, step);
+  }
+}
+
+void showOptions(byte count) {
+  static byte lastCount = 255;
+  static boolean startup = true;
+  const byte thisRow = 4;
+
+  if ( startup ) {
+    oled.buffer = "Opts:  ";
     showLabel(thisRow);
     startup = false;
   }
