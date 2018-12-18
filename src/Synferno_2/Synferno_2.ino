@@ -25,9 +25,9 @@
 #include <Streaming.h>
 #include <Metro.h>
 
-// OLED
-#include "OLED.h"
-OLED oled;
+// // OLED
+// #include "OLED.h"
+// OLED oled;
 
 // MIDI
 #include "MIDI.h"
@@ -36,10 +36,6 @@ MIDI midi;
 // Solenoids
 #include "Solenoid.h"
 Solenoid fireLeft, fireRight;
-
-// Potentiometers
-#include "Potentiometer.h"
-Potentiometer duration, offset;
 
 // Fire button
 #include "Button.h"
@@ -56,13 +52,102 @@ ButtonGroup frequency;
 // Web Portal
 #include "Portal.h"
 
-byte midiDelay = 0;
+// Menu
+#include <menu.h>
+#include <Ticker.h>
+Ticker updateEncoder;
+//#define ENC_DECODER ENC_FLAKY
+#include <ClickEncoder.h>
+#include <menuIO/clickEncoderIn.h>
+#include <menuIO/u8g2Out.h>
+#include <menuIO/chainStream.h>
+#include <menuIO/serialOut.h>
+#include <menuIO/serialIn.h>
+#define encA    32
+#define encB    4
+#define encBtn  19
+#include <Wire.h>
+#define fontName u8g2_font_7x13_mf
+#define fontX 7
+#define fontY 16
+#define offsetX 0
+#define offsetY 3
+#define U8_Width 128
+#define U8_Height 64
+#define USE_HWI2C
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0);//, SCL, SDA);
+// define menu colors --------------------------------------------------------
+//each color is in the format:
+//  {{disabled normal,disabled selected},{enabled normal,enabled selected, enabled editing}}
+// this is a monochromatic color table
+const colorDef<uint8_t> colors[] MEMMODE={
+  {{0,0},{0,1,1}},//bgColor
+  {{1,1},{1,0,0}},//fgColor
+  {{1,1},{1,0,0}},//valColor
+  {{1,1},{1,0,0}},//unitColor
+  {{0,1},{0,0,1}},//cursorColor
+  {{1,1},{1,0,0}},//titleColor
+};
+
+int mode=0;
+unsigned int midiDelay=0;
+unsigned int offset=0;
+int bpm=150;
+
+void selectMidi() {
+  midiDelay = 10;
+}
+
+void selectManual() {
+  midiDelay = 20;
+}
+
+SELECT(mode,modeMenu,"Mode",doNothing,noEvent,noStyle
+  ,VALUE("Midi Sync",0,selectMidi,enterEvent)
+  ,VALUE("Manual",1,selectManual,enterEvent)
+);
+
+MENU(mainMenu,"SYNFERNO",doNothing,noEvent,wrapStyle
+  ,FIELD(midiDelay,"Delay","",0,24,1,0,doNothing,noEvent,noStyle)
+  ,FIELD(offset,"Offset","",0,24,1,0,doNothing,noEvent,noStyle)
+  ,FIELD(bpm,"BPM","",0,300,1,0,doNothing,noEvent,noStyle)
+  ,SUBMENU(modeMenu)
+);
+
+#define MAX_DEPTH 2
+
+ClickEncoder clickEncoder(encA,encB,encBtn,4);
+ClickEncoderStream encStream(clickEncoder,1);
+
+serialIn serial(Serial);
+
+MENU_INPUTS(in,&encStream,&serial);
+void timerIsr() {clickEncoder.service();}
+
+MENU_OUTPUTS(out,MAX_DEPTH
+  ,U8G2_OUT(u8g2,colors,fontX,fontY,offsetX,offsetY,{0,0,U8_Width/fontX,U8_Height/fontY})
+  ,NONE//,SERIAL_OUT(Serial)
+);
+  
+
+NAVROOT(nav,mainMenu,MAX_DEPTH,in,out);
+
+byte duration;
 
 void setup() {
   Serial.begin(115200);
+  while(!Serial);
 
-  // fire up the output screen
-  oled.begin();
+  // fire up the Screen
+  Wire.begin();
+  u8g2.begin();
+  u8g2.setFont(fontName);
+
+  // configure Menu
+  nav.showTitle=false;
+
+  // fire up the rotary encoder
+  updateEncoder.attach_ms(1, timerIsr);
 
   // fire up MIDI
   midi.begin();
@@ -75,11 +160,8 @@ void setup() {
   showFireRight(fireRight.getState());
 
   // knobs
-  duration.begin(POT_PIN1, 12, 0, 4200);
-  showDuration(duration.getSector());
-
-  offset.begin(POT_PIN2, MIDI_CLOCKS_PER_BEAT, 0, 4200);
-  showOffset(offset.getSector());
+  showDuration(duration);
+  showOffset(offset);
 
   // buttons
   makeFireNow.begin(POOF_BOTH_BUTTON_PIN);
@@ -99,14 +181,19 @@ void setup() {
 }
 
 void loop() {
+  // 0. handle rotary encoder menu
+  nav.doInput();
+  // digitalWrite(LEDPIN, ledCtrl);
+  if (nav.changed(0)) {//only draw if menu changed for gfx device
+    //change checking leaves more time for other tasks
+    u8g2.firstPage();
+    do nav.doOutput(); while(u8g2.nextPage());
+  }
+  
   // 1. handle web portal
   portal.update();
   
   // 2. update the inputs
-  if ( duration.update() ) {
-    // have a change in duration
-    showDuration(duration.getSector());
-  }
   if ( frequency.update() ) {
     midi.setClocksPerTrigger(map(frequency.getValue(), 0, NUM_FREQUENCY_BUTTONS, MIDI_CLOCKS_PER_BEAT/SCALE, MIDI_CLOCKS_PER_BEAT*SCALE));
     showFrequency(frequency.getValue());
@@ -116,16 +203,20 @@ void loop() {
     midiDelay = portal.getOffset();
     showOffset(midiDelay);
   }
-  if ( offset.update() ) {
-    // console has changed offset.  Override web portal settings
-    midiDelay = offset.getSector();
-    portal.setOffset(midiDelay);
-    showOffset(midiDelay);
-  }  
   if (resetCounter.update() && resetCounter.getState()) {
     // reset button has just been pressed.  Reset the MIDI clock.
-    Serial << F("reset counter") << endl;
     midi.resetCounter();
+  }
+
+  if ( false ) {
+    // have a change in duration
+    showDuration(duration);
+  }
+  if ( false ) {
+    // console has changed offset.  Override web portal settings
+    midiDelay = offset;
+    portal.setOffset(midiDelay);
+    showOffset(midiDelay);
   }
 
   // 3. decode the MIDI situation
@@ -147,7 +238,7 @@ void loop() {
     byte fireOnAt = (midiClocksPerTrigger - midiDelay) % midiClocksPerTrigger;
     
     // and when do we need to turn it off?
-    byte fireOffAt = (fireOnAt + duration.getSector()) % midiClocksPerTrigger;
+    byte fireOffAt = (fireOnAt + duration) % midiClocksPerTrigger;
 
     // given the current counter and on/off times, should we shoot fire or not?
     if( frequency.hasSelection() && timeForFire( counter, fireOnAt, fireOffAt ) ) {
@@ -231,228 +322,171 @@ void manualFiring(boolean doFire) {
   }
 }
 
-// void showFireLeft(boolean state) {
-//    static boolean lastState = !state;
-
-//   if ( lastState != state ) {
-//     lastState = state;
-//     if ( state ) {
-//       oled.solLeft = "F";
-//     }
-//     else {
-//       oled.solLeft = ".";
-//     }
-//   }
-// }
-
-// void showFireRight(boolean state) {
-//   static boolean lastState = !state;
-
-//   if ( lastState != state ) {
-//     lastState = state;
-//     if ( state ) {
-//       oled.solRight = "F";
-//     }
-//     else {
-//       oled.solRight = ".";
-//     }
-//   }
-// }
-
-// void showMakeFireNow(boolean state) {
-//   static boolean lastState = !state;
-
-//   if ( lastState != state ) {
-//     lastState = state;
-//     if ( state ) {
-//       oled.mfn = "X";
-//     }
-//     else {
-//       oled.mfn = ".";
-//     }
-//   }
-// }
-
-// void showMIDI(byte count) {
-//   oled.midi = count;
-// }
-
-// void showDuration(byte count) {
-//   oled.duration = count;
-// }
-
-// void showOffset(byte count) {
-//   oled.offset = count;
-// }
-
-// void showFrequency(byte count) {
-//   oled.freq = count;
-// }
-
 // the OLED display is hella-slow, so we want to be careful about how much we print there.
 // much of this code is just being "smart" about updating the OLED.
 
 void showFireLeft(boolean state) {
-  static boolean lastState = !state;
-  static boolean startup = true;
-  const byte thisRow = 7;
+  // static boolean lastState = !state;
+  // static boolean startup = true;
+  // const byte thisRow = 7;
 
-  if ( startup ) {
-    oled.buffer = "<. Synferno  .>";
-    showLabel(thisRow);
-    startup = false;
-  }
-  if ( lastState != state ) {
-    lastState = state;
-    if ( state ) {
-      oled.buffer = "F";
-    }
-    else {
-      oled.buffer = ".";
-    }
-    oled.write(thisRow, 1);
-  }
+  // if ( startup ) {
+  //   oled.buffer = "<. Synferno  .>";
+  //   showLabel(thisRow);
+  //   startup = false;
+  // }
+  // if ( lastState != state ) {
+  //   lastState = state;
+  //   if ( state ) {
+  //     oled.buffer = "F";
+  //   }
+  //   else {
+  //     oled.buffer = ".";
+  //   }
+  //   oled.write(thisRow, 1);
+  // }
 }
 
 void showFireRight(boolean state) {
-  static boolean lastState = !state;
-  static boolean startup = true;
-  const byte thisRow = 7;
+  // static boolean lastState = !state;
+  // static boolean startup = true;
+  // const byte thisRow = 7;
 
-  if ( startup ) {
-    oled.buffer = "<. Synferno  .>";
-    showLabel(thisRow);
-    startup = false;
-  }
-  if ( lastState != state ) {
-    lastState = state;
-    if ( state ) {
-      oled.buffer = "F";
-    }
-    else {
-      oled.buffer = ".";
-    }
-    oled.write(thisRow, 13);
-  }
+  // if ( startup ) {
+  //   oled.buffer = "<. Synferno  .>";
+  //   showLabel(thisRow);
+  //   startup = false;
+  // }
+  // if ( lastState != state ) {
+  //   lastState = state;
+  //   if ( state ) {
+  //     oled.buffer = "F";
+  //   }
+  //   else {
+  //     oled.buffer = ".";
+  //   }
+  //   oled.write(thisRow, 13);
+  // }
 }
 
 void showMakeFireNow(boolean state) {
-  static boolean lastState = !state;
-  static boolean startup = true;
-  const byte thisRow = 5;
+  // static boolean lastState = !state;
+  // static boolean startup = true;
+  // const byte thisRow = 5;
 
-  if ( startup ) {
-    oled.buffer = "MFN:  ";
-    showLabel(thisRow);
-    startup = false;
-  }
-  if ( lastState != state ) {
-    lastState = state;
-    if ( state ) {
-      oled.buffer = "X";
-    }
-    else {
-      oled.buffer = ".";
-    }
-    oled.write(thisRow, 6);
-  }
+  // if ( startup ) {
+  //   oled.buffer = "MFN:  ";
+  //   showLabel(thisRow);
+  //   startup = false;
+  // }
+  // if ( lastState != state ) {
+  //   lastState = state;
+  //   if ( state ) {
+  //     oled.buffer = "X";
+  //   }
+  //   else {
+  //     oled.buffer = ".";
+  //   }
+  //   oled.write(thisRow, 6);
+  // }
 }
 
 void showMIDI(byte count) {
-  static byte lastCount = 255;
-  static boolean startup = true;
-  const byte thisRow = 0;
+  // static byte lastCount = 255;
+  // static boolean startup = true;
+  // const byte thisRow = 0;
 
-  if ( startup ) {
-    oled.buffer = "MIDI: ";
-    showLabel(thisRow);
-    startup = false;
-  }
+  // if ( startup ) {
+  //   oled.buffer = "MIDI: ";
+  //   showLabel(thisRow);
+  //   startup = false;
+  // }
 
-  if ( lastCount != count ) {
-    lastCount = count;
-    if ( count == 0 ) {
-      oled.buffer = "X";
-      oled.write(thisRow, 6); // don't pad, place at a specific location
-    }
-    if ( count == 3 ) {
-      oled.buffer = ".";
-      oled.write(thisRow, 6); // don't pad, place at a specific location
-    }
-  }
+  // if ( lastCount != count ) {
+  //   lastCount = count;
+  //   if ( count == 0 ) {
+  //     oled.buffer = "X";
+  //     oled.write(thisRow, 6); // don't pad, place at a specific location
+  //   }
+  //   if ( count == 3 ) {
+  //     oled.buffer = ".";
+  //     oled.write(thisRow, 6); // don't pad, place at a specific location
+  //   }
+  // }
 }
 
 void showDuration(byte count) {
-  static byte lastCount = 255;
-  static boolean startup = true;
-  const byte thisRow = 1;
+  // static byte lastCount = 255;
+  // static boolean startup = true;
+  // const byte thisRow = 1;
 
-  if ( startup ) {
-    oled.buffer = "Dur:  ";
-    showLabel(thisRow);
-    startup = false;
-  }
-  if ( lastCount != count ) {
-    lastCount = count;
-    showCounter(thisRow, 6, count);
-  }
+  // if ( startup ) {
+  //   oled.buffer = "Dur:  ";
+  //   showLabel(thisRow);
+  //   startup = false;
+  // }
+  // if ( lastCount != count ) {
+  //   lastCount = count;
+  //   showCounter(thisRow, 6, count);
+  // }
 }
 
 void showOffset(byte count) {
-  static byte lastCount = 255;
-  static boolean startup = true;
-  const byte thisRow = 2;
+  // static byte lastCount = 255;
+  // static boolean startup = true;
+  // const byte thisRow = 2;
 
-  if ( startup ) {
-    oled.buffer = "Off:  ";
-    showLabel(thisRow);
-    startup = false;
-  }
-  if ( lastCount != count ) {
-    lastCount = count;
-    showCounter(thisRow, 6, count);
-  }
+  // if ( startup ) {
+  //   oled.buffer = "Off:  ";
+  //   showLabel(thisRow);
+  //   startup = false;
+  // }
+  // if ( lastCount != count ) {
+  //   lastCount = count;
+  //   showCounter(thisRow, 6, count);
+  // }
 }
 
 void showFrequency(int step) {
-  static int lastStep = 0;
-  static boolean startup = true;
-  const byte thisRow = 3;
+  // static int lastStep = 0;
+  // static boolean startup = true;
+  // const byte thisRow = 3;
 
-  if ( startup ) {
-    oled.buffer = "Freq: ";
-    showLabel(thisRow);
-    startup = false;
-  }
-  if ( lastStep != step ) {
-    lastStep = step;
-    showCounter(thisRow, 6, step);
-  }
+  // if ( startup ) {
+  //   oled.buffer = "Freq: ";
+  //   showLabel(thisRow);
+  //   startup = false;
+  // }
+  // if ( lastStep != step ) {
+  //   lastStep = step;
+  //   showCounter(thisRow, 6, step);
+  // }
 }
 
 void showOptions(byte count) {
-  static byte lastCount = 255;
-  static boolean startup = true;
-  const byte thisRow = 4;
+  // static byte lastCount = 255;
+  // static boolean startup = true;
+  // const byte thisRow = 4;
 
-  if ( startup ) {
-    oled.buffer = "Opts:  ";
-    showLabel(thisRow);
-    startup = false;
-  }
-  if ( lastCount != count ) {
-    lastCount = count;
-    showCounter(thisRow, 6, count);
-  }
+  // if ( startup ) {
+  //   oled.buffer = "Opts:  ";
+  //   showLabel(thisRow);
+  //   startup = false;
+  // }
+  // if ( lastCount != count ) {
+  //   lastCount = count;
+  //   showCounter(thisRow, 6, count);
+  // }
 }
 
 void showLabel(byte row) {
-  oled.write(row, 0, true); // pad
+  // oled.write(row, 0, true); // pad
 }
 
 void showCounter(byte row, byte col, int counter) {
-  oled.buffer = String(counter);
-  if ( oled.buffer.length() < 2 ) oled.buffer += " ";
-  oled.write(row, col); // don't pad, place at a specific location
+  // oled.buffer = String(counter);
+  // if ( oled.buffer.length() < 2 ) oled.buffer += " ";
+  // oled.write(row, col); // don't pad, place at a specific location
 }
+
 
