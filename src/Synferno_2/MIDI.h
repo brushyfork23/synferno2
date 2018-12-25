@@ -5,10 +5,6 @@
 
 #include <Metro.h>
 
-// pins
-#define MIDI_RX_PIN 10
-#define MIDI_TX_PIN 11
-
 // Relevant MIDI messages
 #define MIDI_CLOCK 248
 #define MIDI_START 250

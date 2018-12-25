@@ -3,6 +3,9 @@
 Portal portal;
 
 boolean Portal::begin() {
+  Serial1.begin(9600);    // initialize serial for ESP module
+  WiFi.init(&Serial1);    // initialize ESP module
+
   // configure soft access point
   if (!WiFi.softAPConfig(this->local_IP, this->gateway, this->subnet)) {
     return false;

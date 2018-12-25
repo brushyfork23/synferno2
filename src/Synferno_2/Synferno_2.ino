@@ -1,26 +1,115 @@
 
-// Compile for Sparkfun ESP32 Thing
+// Compile for Arduino Mega 2560
 
-// Sparkfun ESP32 Thing: https://cdn.sparkfun.com/assets/learn_tutorials/5/0/7/esp32-thing-graphical-datasheet-v02.png
-// Adafruit Monochrome 1.3" 128x64 OLED graphic display SSD1306: https://www.adafruit.com/product/938
+// Arduino Mega 2560: https://smile.amazon.com/Elegoo-EL-CB-003-ATmega2560-ATMEGA16U2-Arduino/dp/B01H4ZLZLQ
+// WEMOS LOLIN D1 mini: https://wiki.wemos.cc/products:d1:d1_mini
+// Blue 2.42" SSD1309 128x64 OLED: https://www.ebay.com/itm/253714699654
+// Rotary Encoder w/ Click switch: https://www.ebay.com/itm/232396602079
 // MIDI Breakout Board: https://smile.amazon.com/gp/product/B00YDLVLVO
 // IRF520 MOSFET Driver Module: https://smile.amazon.com/gp/product/B06XHH1TQM
 // 12V / 5V DC Buck Converter: https://smile.amazon.com/gp/product/B01MEESLZ6
 // 12V 10A Power Supply: https://smile.amazon.com/gp/product/B00Z9X4GLW
 
-// 21 to OLED `Data`
-// 22 to OLED `Clk`
-// 16 to MIDI `tx`
-// 17 to MIDI `rx`
-// 13 to left solenoid MOSFET Driver Module `SIG`
-// VUSB to Buck Converter `+5`
-// 10k ohm resister between 39 and +3.3
-// 10k ohm resister between 38 and +3.3
-// 10k ohm resister between 37 and +3.3
-// 10k ohm resister between 36 and +3.3
-// 10k ohm resister between 35 and +3.3
-// 10k ohm resister between 34 and +3.3
+// Arduino Mega
+// A2 to OLED `CS`
+// 2 to Rotary Encoder `A`
+// 3 to Rotary Encoder `B`
+// 6 to Pushbutton Zero `LED`
+// 7 to Pushbutton Freq 0 `LED`
+// 8 to Pushbutton Freq 1 `LED`
+// 9 to Pushbutton Freq 2 `LED`
+// 10 to Pushbutton Freq 3 `LED`
+// 11 to Pushbutton Freq 4 `LED`
+// 12 to Pushbutton Fire `LED`
+// 13 to Pushbutton Tap `LED`
+// 16 to MIDI `rx`
+// 17 to MIDI `tx`
+// 18 to ESP8266 `RX`
+// 19 to ESP8266 `TX`
+// 20 to OLED `SDA`
+// 21 to OLED `SCLK`
+// 22 to OLED `DC`
+// 23 to OLED `RES`
+// 24 to Rotary Encoder `Btn`
+// 25 to MOSFET Driver Module 0 `SIG`
+// 26 to MOSFET Driver Module 1 `SIG`
+// 27 to MOSFET Driver Module 2 `SIG`
+// 28 to MOSFET Driver Module 3 `SIG`
+// 29 to Pushbutton Freq 0 `signal`
+// 30 to Pushbutton Freq 1 `signal`
+// 31 to Pushbutton Freq 2 `signal`
+// 32 to Pushbutton Freq 3 `signal`
+// 33 to Pushbutton Freq 4 `signal`
+// 34 to Pushbutton Fire 0 `signal`
+// 35 to Pushbutton Fire 1 `signal`
+// 36 to Pushbutton Fire 2 `signal`
+// 39 to Pushbutton Zero `signal`
+// 40 to Pushbutton Tap `signal`
+// VCC to Buck Converter `+5`
+// GND to GND
 
+// WEMOS LOLIN D1 mini (ESP8266)
+// TX to Mega 19
+// RX to Mega 18
+// 5V to Buck Converter `+5`
+// GND to GND
+
+// SSD1309 OLED
+// CS to Mega A2
+// DC to Mega 22
+// RES to Mega 23
+// SCLK to Mega 21
+// SDA to Mega 20
+// VDD to Buck Converter `+5`
+// VSS to GND
+
+// Click Encoder
+// A to Mega 2
+// B to Mega 3
+// Btn to Mega 24
+// + to Buck Converter `+5`
+// GND to GND
+
+// MOSFET Driver Module (0)
+// SIG to Mega 25
+// VCC to Buck Converter `+5`
+// GND to GND
+
+// MOSFET Driver Module (1)
+// SIG to Mega 26
+// VCC to Buck Converter `+5`
+// GND to GND
+
+// MOSFET Driver Module (2)
+// SIG to Mega 27
+// VCC to Buck Converter `+5`
+// GND to GND
+
+// MOSFET Driver Module (3)
+// SIG to Mega 28
+// VCC to Buck Converter `+5`
+// GND to GND
+
+// Midi breakout
+// tx to Mega 16
+// rx to Mega 17
+// + to Buck Converter `+5`
+// - to GND
+
+
+
+#define OLED_CS A2
+#define OLED_DC 22
+#define OLED_RST 23
+#define fontName u8g2_font_7x13_mf
+#define fontX 7
+#define fontY 16
+#define offsetX 0
+#define offsetY 3
+#define U8_Width 128
+#define U8_Height 64
+#define USE_HWI2C
+U8G2_SSD1309_128X64_NONAME0_1_4W_SW_SPI u8g2(U8G2_R0, SCL, SDA, OLED_CS, OLED_DC, OLED_RST);
 
 #include <Streaming.h>
 #include <Metro.h>
@@ -41,12 +130,13 @@ Solenoid fireLeft, fireRight;
 #include "Button.h"
 Button makeFireNow;
 Button resetCounter;
+Button tapCounter;
 
 // Frequency buttons
 #include "ButtonGroup.h"
 #define NUM_FREQUENCY_BUTTONS 5
-byte FREQUENCY_BUTTON_PINS[NUM_FREQUENCY_BUTTONS] = {35, 36, 37, 38, 39};
-byte FREQUENCY_LED_PINS[NUM_FREQUENCY_BUTTONS] = {14, 27, 26, 25, 33};
+byte FREQUENCY_BUTTON_PINS[NUM_FREQUENCY_BUTTONS] = {29, 30, 31, 32, 33};
+byte FREQUENCY_LED_PINS[NUM_FREQUENCY_BUTTONS] = {7, 8, 9, 10, 11};
 ButtonGroup frequency;
 
 // Web Portal
@@ -56,7 +146,6 @@ ButtonGroup frequency;
 #include <menu.h>
 #include <Ticker.h>
 Ticker updateEncoder;
-//#define ENC_DECODER ENC_FLAKY
 #include <ClickEncoder.h>
 #include <menuIO/clickEncoderIn.h>
 #include <menuIO/u8g2Out.h>
@@ -67,6 +156,9 @@ Ticker updateEncoder;
 #define encB    4
 #define encBtn  19
 #include <Wire.h>
+#define OLED_CS A2
+#define OLED_DC 2
+#define OLED_RST 4
 #define fontName u8g2_font_7x13_mf
 #define fontX 7
 #define fontY 16
@@ -75,7 +167,7 @@ Ticker updateEncoder;
 #define U8_Width 128
 #define U8_Height 64
 #define USE_HWI2C
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0);//, SCL, SDA);
+U8G2_SSD1309_128X64_NONAME0_1_4W_SW_SPI u8g2(U8G2_R0, SCL, SDA, OLED_CS, OLED_DC, OLED_RST);
 // define menu colors --------------------------------------------------------
 //each color is in the format:
 //  {{disabled normal,disabled selected},{enabled normal,enabled selected, enabled editing}}
