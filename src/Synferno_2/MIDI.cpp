@@ -3,22 +3,21 @@
 
 void MIDI::begin() {
   // give MIDI-device a short time to "digest" MIDI messages
-  Serial1.begin(31250);
+  Serial2.begin(31250);
   delay(100);
 
   clockCounter = 255; // no MIDI signal; we're "off the clock".
   tickDuration = 20833; // us, 120 bpm
   beatDuration = 500; // ms, 120 bpm
-  clocksPerTrigger = MIDI_CLOCKS_PER_BEAT;
 }
 
 boolean MIDI::update() {
   // in case the midi drops out
   static Metro timeoutMIDI(1000UL);
 
-  if (Serial1.available() > 0) {
+  if (Serial2.available() > 0) {
 
-    byte midiByte = Serial1.read();
+    byte midiByte = Serial2.read();
 //    byte midiChannel = midiByte & B00001111;
 //    byte midiCommand = midiByte & B11110000;
 
@@ -31,7 +30,7 @@ boolean MIDI::update() {
   }
 
   if ( SIMULATE_MIDI ) {
-    const float beatEvery = 60.0 * 1000.0 / MIDI_CLOCKS_PER_BEAT / SIMULATE_BPM; // ms/tick
+    const float beatEvery = 60.0 * 1000.0 / CLOCK_TICKS_PER_BEAT / SIMULATE_BPM; // ms/tick
     static Metro clockEvery(beatEvery);
     if ( clockEvery.check() ) {
       clockEvery.reset();
@@ -52,25 +51,13 @@ byte MIDI::getCounter() {
   return clockCounter;
 }
 
-byte MIDI::getBeatCounter() {
-  return clockCounter % MIDI_CLOCKS_PER_BEAT;
-}
-
 void MIDI::resetCounter() {
   clockCounter = 0;
 }
 
-void MIDI::setClocksPerTrigger(byte ticks) {
-  this->clocksPerTrigger = ticks;
-}
-
-byte MIDI::getClocksPerTrigger() {
-  return this->clocksPerTrigger;
-}
-
 void MIDI::processTick() {
   // increment the clock
-  clockCounter = (clockCounter + 1) % (MIDI_CLOCKS_PER_BEAT * SCALE);
+  clockCounter = (clockCounter + 1) % (CLOCK_TICKS_PER_BEAT * SCALE);
 
   // time the ticks
   static unsigned long lastTick = micros();
@@ -83,7 +70,7 @@ void MIDI::processTick() {
   tickDuration = (tickDuration*(smoothTick-1) + deltaTick)/smoothTick;
 
   // time the beats
-  if( clockCounter % MIDI_CLOCKS_PER_BEAT == 0 ) {
+  if( clockCounter % CLOCK_TICKS_PER_BEAT == 0 ) {
     // time the beats
     static unsigned long lastBeat = millis();
     unsigned long thisBeat = millis();

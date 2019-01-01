@@ -3,8 +3,10 @@
 
 #include <Arduino.h>
 
-#define SOLENOID_PIN1 13
-#define SOLENOID_PIN2 12
+#define SOLENOID_PIN0 25
+#define SOLENOID_PIN1 26
+#define SOLENOID_PIN2 27
+#define SOLENOID_PIN3 28
 
 /* 
  * When the solenoid (an inductor) is powered up, it pulls significantly more (3x?) amperage than the
@@ -22,12 +24,12 @@ class Solenoid{
   public:
     void begin(byte pin, boolean fireValue=HIGH);
 
-    boolean update();
+    boolean update(); // report state change
     
-    boolean getState();
+    boolean getState(); // report on or off
     
-    void on();
-    void off();
+    void on(); // change state to on
+    void off(); // change state to off
 
   private:
     byte pin;

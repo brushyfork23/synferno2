@@ -1,7 +1,8 @@
 #include "ButtonGroup.h"
 
 void ButtonGroup::begin(byte numPins, byte button_pins[], byte led_pins[], boolean toggle) {
-
+  this->led_pins = led_pins;
+  
   this->numPins = numPins;
 
   this->toggle = toggle;
@@ -11,7 +12,9 @@ void ButtonGroup::begin(byte numPins, byte button_pins[], byte led_pins[], boole
     this->buttons[i].attach( button_pins[i] , INPUT_PULLUP  );
     this->buttons[i].interval(25);
 
-    // TODO: initialize LED pins
+    pinMode(led_pins[i], OUTPUT);
+    // default to low illumination
+    analogWrite(led_pins[i], BRIGHTNESS_DIM_WHITE);
   }
 
   this->update();
@@ -35,9 +38,11 @@ boolean ButtonGroup::update() {
 
   if (newSelected != this->currentSelected) { // new selection was made
     this->currentSelected = newSelected;
+    this->writeLEDs();
     return true;
   } else if (this->currentSelected != -1 && this->toggle){ // current button was de-selected
     this->currentSelected = -1;
+    this->writeLEDs();
     return true;
   }
   return false; // no selection was made or re-press does not de-select due to toggle state.
@@ -49,4 +54,14 @@ byte ButtonGroup::getValue() {
 
 boolean ButtonGroup::hasSelection() {
   return this->getValue() >= 0;
+}
+
+void ButtonGroup::writeLEDs() {
+  for (int i = 0; i < this->numPins; i++) {
+    if (i == this->currentSelected) {
+      analogWrite(led_pins[i], BRIGHTNESS_BRIGHT_WHITE);
+    } else {
+      analogWrite(led_pins[i], BRIGHTNESS_DIM_WHITE);
+    }
+  }
 }

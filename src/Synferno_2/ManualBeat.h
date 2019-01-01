@@ -1,15 +1,9 @@
-#ifndef MIDI_h
-#define MIDI_h
+#ifndef ManualBeat_h
+#define ManualBeat_h
 
 #include <Arduino.h>
 
 #include <Metro.h>
-
-// Relevant MIDI messages
-#define MIDI_CLOCK 248
-#define MIDI_START 250
-#define MIDI_CONTINUE 251
-#define MIDI_STOP 252
 
 #define CLOCK_TICKS_PER_BEAT 24
 
@@ -17,28 +11,25 @@
                 // although there are 24 ticks per beat, if we want to trigger every four
                 // beats then we'll need to count up to CLOCK_TICKS_PER_BEAT * SCALE
 
-#define SIMULATE_MIDI 0
-#define SIMULATE_BPM 120.0
+#define DEFAULT_BPM 120.0
+#define MILLIS_PER_MINUTE 60000
 
-class MIDI{
+class ManualBeat{
   public:
     void begin();
 
-    boolean update(); // process MIDI messages.
+    boolean update();
 
     byte getCounter(); // 0 to (CLOCK_TICKS_PER_BEAT * SCALE) - 1 ticks
 
     void resetCounter(); // set counter back to 0
 
-    unsigned long tickLength(); // length of ticks, uS
-    unsigned long beatLength();  // length of 24 ticks (one beat), ms
+    void setBPM(unsigned int bpm);
     
   private:
-    byte clockCounter;
+    byte tickCounter;
 
-    unsigned long tickDuration, beatDuration;
-    
-    void processTick();
+    Metro clockTickEvery;
 };
 
 #endif

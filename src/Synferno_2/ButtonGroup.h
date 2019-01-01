@@ -3,10 +3,12 @@ This class abstracts control of a group of buttons.
 Provide an array of button pins and then call update() to be notified of a new press.
 When the `toggle` flag is true, pressing a selected button will deselect it,
 whereas if the flag is false a repress will cause no state change.
-In the case of multiple simultanious presses, TODO
 */
 #ifndef ButtonGroup_h
 #define ButtonGroup_h
+
+#define BRIGHTNESS_DIM_WHITE 50
+#define BRIGHTNESS_BRIGHT_WHITE 200
 
 #include <Arduino.h>
 #include <Bounce2.h>
@@ -24,7 +26,10 @@ class ButtonGroup{
     
   private:
     byte numPins, toggle, currentSelected;
+    byte* led_pins;
     Bounce* buttons;
+
+    void writeLEDs();
 };
 
 #endif
