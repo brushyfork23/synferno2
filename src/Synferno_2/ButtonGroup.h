@@ -7,8 +7,8 @@ whereas if the flag is false a repress will cause no state change.
 #ifndef ButtonGroup_h
 #define ButtonGroup_h
 
-#define BRIGHTNESS_DIM_WHITE 50
-#define BRIGHTNESS_BRIGHT_WHITE 200
+#define BRIGHTNESS_DIM_WHITE 10
+#define BRIGHTNESS_BRIGHT_WHITE 225
 
 #include <Arduino.h>
 #include <Bounce2.h>

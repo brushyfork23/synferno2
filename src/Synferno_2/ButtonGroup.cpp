@@ -2,7 +2,7 @@
 
 void ButtonGroup::begin(byte numPins, byte button_pins[], byte led_pins[], boolean toggle) {
   this->led_pins = led_pins;
-  
+
   this->numPins = numPins;
 
   this->toggle = toggle;
@@ -27,13 +27,19 @@ boolean ButtonGroup::update() {
   updateInterval.reset();
 
   byte newSelected = -1;
+  boolean hasStateChange = false;
   // read each button
   for (int i = 0; i < this->numPins; i++)  {
     this->buttons[i].update();
     if (this->buttons[i].fell()) {
+      hasStateChange = true;
       // If multiple buttons had been pressed simultaniously, the highest index button will be used
       newSelected = i;
     }
+  }
+
+  if (!hasStateChange) {
+    return false;
   }
 
   if (newSelected != this->currentSelected) { // new selection was made

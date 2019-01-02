@@ -12,8 +12,8 @@
 
 // Arduino Mega
 // A2 to OLED `CS`
-// A0 to Rotary Encoder `A`
-// A1 to Rotary Encoder `B`
+// A8 to Rotary Encoder `A`
+// A9 to Rotary Encoder `B`
 // 6 to Pushbutton Zero `LED`
 // 7 to Pushbutton Freq 0 `LED`
 // 8 to Pushbutton Freq 1 `LED`
@@ -70,8 +70,8 @@
 // VSS to GND
 
 // Click Encoder
-// A to Mega A0
-// B to Mega A1
+// A to Mega A8
+// B to Mega A9
 // Btn to Mega 24
 // + to Buck Converter `+5`
 // GND to GND
@@ -121,9 +121,9 @@ Solenoid fireA, fireB, fireC, fireD;
 #include "Button.h"
 #include "Metro.h"
 #define BRIGHTNESS_BRIGHT_RED 255
-#define BRIGHTNESS_DIM_RED 50
-#define BRIGHTNESS_BRIGHT_BLUE 200
-#define BRIGHTNESS_DIM_BLUE 50
+#define BRIGHTNESS_DIM_RED 20
+#define BRIGHTNESS_BRIGHT_BLUE 245
+#define BRIGHTNESS_DIM_BLUE 15
 #define BTN_FIRE_0_PIN 34
 #define BTN_FIRE_1_PIN 35
 #define BTN_FIRE_2_PIN 36
@@ -157,14 +157,15 @@ ButtonGroup frequency;
  * Begin Menu
  */
 #include <menu.h>
+#include <menuIO/u8g2Out.h>
 #include <menuIO/encoderIn.h>
 #include <menuIO/keyIn.h>
-#include <menuIO/u8g2Out.h>
 #include <menuIO/chainStream.h>
-#define ENC_A    A0
-#define ENC_B    A1
+#include <SPI.h>
+using namespace Menu;
+#define ENC_A    A8
+#define ENC_B    A9
 #define ENC_BTN  24
-#include <Wire.h>
 #define OLED_CS A2
 #define OLED_DC 22
 #define OLED_RST 23
@@ -198,14 +199,14 @@ int duration=4;
 int bpm=120;
 int mode=MODE_MIDI;
 
-SELECT(mode,modeMenu,"Mode:",doNothing,noEvent,noStyle
+SELECT(mode,modeMenu,"Mode",doNothing,noEvent,noStyle
   ,VALUE("Midi",MODE_MIDI,selectMidi,updateEvent)
   ,VALUE("Manual",MODE_MANUAL,selectManual,updateEvent)
 );
 
-MENU(mainMenu,"SYNFERNO",doNothing,noEvent,wrapStyle
+MENU(mainMenu,"SYNFERNO",doNothing,noEvent,noStyle
   ,FIELD(offset,"Offset","",0,24,1,0,configUpdate,updateEvent,noStyle)
-  ,FIELD(duration,"Delay","",0,24,1,0,configUpdate,updateEvent,noStyle)
+  ,FIELD(duration,"Duration","",0,24,1,0,configUpdate,updateEvent,noStyle)
   ,FIELD(bpm,"BPM","",0,300,1,0,editBPM,updateEvent,noStyle)
   ,SUBMENU(modeMenu)
 );
@@ -264,7 +265,7 @@ void setup() {
   while(!Serial);
 
   // fire up the Screen
-  Wire.begin();
+  SPI.begin();
   u8g2.begin();
   u8g2.setFont(fontName);
 
@@ -303,7 +304,7 @@ void setup() {
   pinMode(LED_FIRE_4_PIN, OUTPUT);
   // reset midi counter to zero
   zero.begin(BTN_ZERO_PIN);
-  analogWrite(LED_ZERO_PIN, BRIGHTNESS_BRIGHT_BLUE);
+  analogWrite(LED_ZERO_PIN, BRIGHTNESS_DIM_BLUE);
   pinMode(LED_ZERO_PIN, OUTPUT);
   // tap bpm
   tap.begin(BTN_TAP_PIN);
@@ -348,6 +349,7 @@ void loop() {
   // 1. handle web portal
   // send updates
   if (hasConfigChange) {
+    Serial.println("sending updated config to web server.");
     hasConfigChange = false;
     // Serial1.print(offset);
     // Serial1.print(duration);
@@ -366,13 +368,16 @@ void loop() {
   if (mode == MODE_MANUAL) {
     // handle tap button
     if (tap.update()) {
+      Serial.println("tap button state change.");
       handleTap();
     }
   }
   if ( frequency.update() ) {
+    Serial.println("at least one frequency button state change.");
     clocksPerTrigger = map(frequency.getValue(), 0, NUM_FREQUENCY_BUTTONS, CLOCK_TICKS_PER_BEAT/SCALE, CLOCK_TICKS_PER_BEAT*SCALE);
   }
   if (zero.update()) {
+    Serial.println("zero button state change.");
     // reset button has just been pressed.  Reset the clock counters.
     resetClockCounter();
   }
@@ -381,10 +386,18 @@ void loop() {
   // if there's no MIDI signal or manual beat and we're not manually firing, shut it down.
   if( getClockCounter()==255 && !fireAllNow.getState() ) {
     // shut it down
-    fireA.off();
-    fireB.off();
-    fireC.off();
-    fireD.off();
+    if (!fireANow.getState()) {
+      fireA.off();
+    }
+    if (!fireBNow.getState()) {
+      fireB.off();
+    }
+    if (!fireCNow.getState()) {
+      fireC.off();
+    }
+    if (!fireDNow.getState()) {
+      fireD.off();
+    }
   }
   // if we have a clock tick, a firing frequency, and we're not manually firing, do stuff.
   if( updateClockCounter() && !fireAllNow.getState()) {
@@ -407,25 +420,32 @@ void loop() {
 
   // 4. override with the Make Fire Now buttons
   boolean fireAllNowStateChanged = fireAllNow.update();
+  if (fireAllNowStateChanged) {
+    togglePWMLED(fireAllNow.getState(), LED_FIRE_2_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
+  }
   // if the Fire-All button isn't held, use the individual poofers' buttons to toggle them.
   if (fireANow.update()) {
     if (!fireAllNow.getState()) {
-      firePoofer(fireA, fireANow.getState());
+      Serial.println("manual fire A state toggle.");
+      firePoofer(&fireA, fireANow.getState());
     }
   }
   if (fireBNow.update()) {
     if (!fireAllNow.getState()) {
-      firePoofer(fireB, fireBNow.getState());
+      Serial.println("manual fire B state toggle.");
+      firePoofer(&fireB, fireBNow.getState());
     }
   }
   if (fireCNow.update()) {
     if (!fireAllNow.getState()) {
-      firePoofer(fireC, fireCNow.getState());
+      Serial.println("manual fire C state toggle.");
+      firePoofer(&fireC, fireCNow.getState());
     }
   }
   if (fireDNow.update()) {
     if (!fireAllNow.getState()) {
-      firePoofer(fireD, fireDNow.getState());
+      Serial.println("manual fire D state toggle.");
+      firePoofer(&fireD, fireDNow.getState());
     }
   }
 
@@ -433,36 +453,38 @@ void loop() {
   // When it's released, extinguish all those not individually held.
   if (fireAllNowStateChanged) {
     if (fireAllNow.getState()) {
+      Serial.println("BOOOOSH!");
       // fire all poofers
       fireAllPoofers(true);
     } else {
+      Serial.println("fire all toggled off.");
       if (!fireANow.getState()) {
-        firePoofer(fireA, false);
+        firePoofer(&fireA, false);
       }
       if (!fireBNow.getState()) {
-        firePoofer(fireB, false);
+        firePoofer(&fireB, false);
       }
       if (!fireCNow.getState()) {
-        firePoofer(fireC, false);
+        firePoofer(&fireC, false);
       }
       if (!fireDNow.getState()) {
-        firePoofer(fireD, false);
+        firePoofer(&fireD, false);
       }
     }
   }
   
   // 5. report changes in firing status (change in solenoid state)
   if ( fireA.update() ) {
-    togglePWMLED(fireA.getState(), BTN_FIRE_0_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
+    togglePWMLED(fireA.getState(), LED_FIRE_0_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
   }
   if ( fireB.update() ) {
-    togglePWMLED(fireB.getState(), BTN_FIRE_1_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
+    togglePWMLED(fireB.getState(), LED_FIRE_1_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
   }
   if ( fireC.update() ) {
-    togglePWMLED(fireC.getState(), BTN_FIRE_3_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
+    togglePWMLED(fireC.getState(), LED_FIRE_3_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
   }
   if ( fireD.update() ) {
-    togglePWMLED(fireD.getState(), BTN_FIRE_4_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
+    togglePWMLED(fireD.getState(), LED_FIRE_4_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
   }
 
   // MISC. code for debugging, reporting, etc. to the Serial line
@@ -516,11 +538,11 @@ void fireAllPoofers(boolean doFire) {
 }
 
 // BOOOOSH!  Fire one of the poofers.
-void firePoofer(Solenoid poofer, boolean makeFire) {
+void firePoofer(Solenoid *poofer, boolean makeFire) {
   if (makeFire) {
-    poofer.on();
+    poofer->on();
   } else {
-    poofer.off();
+    poofer->off();
   }
 }
 
