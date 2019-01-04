@@ -153,18 +153,17 @@ byte FREQUENCY_BUTTON_PINS[NUM_FREQUENCY_BUTTONS] = {29, 30, 31, 32, 33};
 byte FREQUENCY_LED_PINS[NUM_FREQUENCY_BUTTONS] = {7, 8, 9, 10, 11};
 ButtonGroup frequency;
 
+
 /*
  * Begin Menu
  */
 #include <menu.h>
 #include <menuIO/u8g2Out.h>
-#include <menuIO/encoderIn.h>
 #include <menuIO/keyIn.h>
-#include <menuIO/chainStream.h>
 #include <SPI.h>
 using namespace Menu;
 #define ENC_A    A8
-#define ENC_B    A9
+#define ENC_B    A10
 #define ENC_BTN  24
 #define OLED_CS A2
 #define OLED_DC 22
@@ -196,61 +195,62 @@ const colorDef<uint8_t> colors[] MEMMODE={
 boolean hasConfigChange = false;
 int offset=0;
 int duration=4;
-int bpm=120;
+int bpm=60;
 int mode=MODE_MIDI;
 
-SELECT(mode,modeMenu,"Mode",doNothing,noEvent,noStyle
-  ,VALUE("Midi",MODE_MIDI,selectMidi,updateEvent)
-  ,VALUE("Manual",MODE_MANUAL,selectManual,updateEvent)
+TOGGLE(mode,modeMenu,"Mode     ",doNothing,noEvent,noStyle
+  ,VALUE("Midi",MODE_MIDI,selectMidi,exitEvent)
+  ,VALUE("Manual",MODE_MANUAL,selectManual,exitEvent)
 );
 
 MENU(mainMenu,"SYNFERNO",doNothing,noEvent,noStyle
-  ,FIELD(offset,"Offset","",0,24,1,0,configUpdate,updateEvent,noStyle)
-  ,FIELD(duration,"Duration","",0,24,1,0,configUpdate,updateEvent,noStyle)
-  ,FIELD(bpm,"BPM","",0,300,1,0,editBPM,updateEvent,noStyle)
+  ,FIELD(offset,"Offset  ","",0,24,1,0,configUpdate,exitEvent,noStyle)
+  ,FIELD(duration,"Duration","",0,24,1,0,configUpdate,exitEvent,noStyle)
+  ,FIELD(bpm,"BPM     ","",0,300,10,1,editBPM,exitEvent,noStyle)
   ,SUBMENU(modeMenu)
 );
 
 #define MAX_DEPTH 2
 
-
-void selectMidi() {
-  configUpdate();
+result selectMidi() {
   // Disable manual BPM setting
   mainMenu[2].enabled=disabledStatus;
+  return configUpdate();
 }
 
-void selectManual() {
-  configUpdate();
+result selectManual() {
   // Enable manual BPM setting
   mainMenu[2].enabled=enabledStatus;
   manualBeat.resetCounter();
+  return configUpdate();
 }
 
-void editBPM() {
-  configUpdate();
+result editBPM() {
   manualBeat.setBPM(bpm);
+  return configUpdate();
 }
 
-void configUpdate() {
+result configUpdate() {
   hasConfigChange = true;
+  Serial.println("config updated");
+  return proceed;
 }
 
-encoderIn<ENC_A,ENC_B> encoder;//simple quad encoder driver
-encoderInStream<ENC_A,ENC_B> encStream(encoder,4);// simple quad encoder fake Stream
 
-//a keyboard with only one key as the encoder button
-keyMap encBtn_map[]={{-ENC_BTN,defaultNavCodes[enterCmd].ch}};//negative pin numbers use internal pull-up, this is on when low
-keyIn<1> encButton(encBtn_map);//1 is the number of keys
-
-MENU_INPUTS(in,&encStream,&encButton);
+//#define ENC_DECODER ENC_FLAKY
+#include <ClickEncoder.h>
+#include <menuIO/clickEncoderIn.h>
+#include <TimerOne.h>
+ClickEncoder clickEncoder(ENC_A,ENC_B,ENC_BTN,2);
+ClickEncoderStream encStream(clickEncoder,2);
+void timerIsr() {clickEncoder.service();}
 
 MENU_OUTPUTS(out,MAX_DEPTH
   ,U8G2_OUT(u8g2,colors,fontX,fontY,offsetX,offsetY,{0,0,U8_Width/fontX,U8_Height/fontY})
   ,NONE
 );
   
-NAVROOT(nav,mainMenu,MAX_DEPTH,in,out);
+NAVROOT(nav,mainMenu,MAX_DEPTH,encStream,out);
 /**
  * End MENU
  */
@@ -273,8 +273,9 @@ void setup() {
   nav.showTitle=false;
 
   // fire up the rotary encoder
-  encButton.begin();
-  encoder.begin();
+  //clickEncoder.setAccelerationEnabled(false);
+  Timer1.initialize(1000);
+  Timer1.attachInterrupt(timerIsr);
 
   // fire up MIDI
   midi.begin();
@@ -310,6 +311,7 @@ void setup() {
   tap.begin(BTN_TAP_PIN);
   analogWrite(LED_TAP_PIN, BRIGHTNESS_DIM_BLUE);
   pinMode(LED_TAP_PIN, OUTPUT);
+  manualBeat.setBPM(bpm);
   // fire per beat frequency
   frequency.begin(NUM_FREQUENCY_BUTTONS, FREQUENCY_BUTTON_PINS, FREQUENCY_LED_PINS);
 
@@ -368,18 +370,37 @@ void loop() {
   if (mode == MODE_MANUAL) {
     // handle tap button
     if (tap.update()) {
-      Serial.println("tap button state change.");
       handleTap();
     }
   }
-  if ( frequency.update() ) {
-    Serial.println("at least one frequency button state change.");
-    clocksPerTrigger = map(frequency.getValue(), 0, NUM_FREQUENCY_BUTTONS, CLOCK_TICKS_PER_BEAT/SCALE, CLOCK_TICKS_PER_BEAT*SCALE);
+  if ( frequency.update() && frequency.hasSelection() ) {
+    switch (frequency.getValue()) {
+      case 0:
+        clocksPerTrigger = 96;
+        break;
+      case 1:
+        clocksPerTrigger = 48;
+        break;
+      case 2:
+        clocksPerTrigger = 24;
+        break;
+      case 3:
+        clocksPerTrigger = 12;
+        break;
+      case 4:
+        clocksPerTrigger = 6;
+        break;
+    }
+    //clocksPerTrigger = map(frequency.getValue(), 0, NUM_FREQUENCY_BUTTONS-1, CLOCK_TICKS_PER_BEAT*SCALE, CLOCK_TICKS_PER_BEAT/SCALE);
+    Serial.print("set clocks per trigger: ");
+    Serial.println(clocksPerTrigger);
   }
   if (zero.update()) {
-    Serial.println("zero button state change.");
-    // reset button has just been pressed.  Reset the clock counters.
-    resetClockCounter();
+    togglePWMLED(tap.getState(), BTN_TAP_PIN, BRIGHTNESS_BRIGHT_BLUE, BRIGHTNESS_DIM_BLUE);
+    if (zero.getState()) {
+      // reset button has just been pressed.  Reset the clock counters.
+      resetClockCounter();
+    }
   }
 
   // 3. check beat for firing status
@@ -404,6 +425,14 @@ void loop() {
 
     // we have a MIDI signal to follow, or a manual beat
     byte counter = getClockCounter();
+    if (counter%CLOCK_TICKS_PER_BEAT==0) {
+      Serial.print("PERB counter: ");
+      Serial.println(counter);
+    }
+    if (counter%clocksPerTrigger==0 ){
+      Serial.print("TRIG counter: ");
+      Serial.println(counter);
+    }
 
     // how far back from the poof do we need to trigger the hardware?
     byte fireOnAt = (clocksPerTrigger - offset) % clocksPerTrigger;
@@ -412,10 +441,10 @@ void loop() {
     byte fireOffAt = (fireOnAt + duration) % clocksPerTrigger;
 
     // given the current counter and on/off times, should we shoot fire or not?
-    fireAllPoofers( frequency.hasSelection() && timeForFire( counter, fireOnAt, fireOffAt ) );
+    fireAllPoofers( frequency.hasSelection() && timeForFire( counter % clocksPerTrigger, fireOnAt, fireOffAt ) );
 
     // report tick, noting we do this after the hardware-level update
-    showBeat(getClockCounter() % CLOCK_TICKS_PER_BEAT);
+    showBeat(counter % CLOCK_TICKS_PER_BEAT);
   }
 
   // 4. override with the Make Fire Now buttons
@@ -562,7 +591,7 @@ void showBeat(byte count) {
     if ( count == 0 ) {
       analogWrite(LED_TAP_PIN, BRIGHTNESS_BRIGHT_BLUE);
     }
-    if ( count == 1 ) {
+    if ( count == 2 ) {
       analogWrite(LED_TAP_PIN, BRIGHTNESS_DIM_BLUE);
     }
   }
@@ -573,6 +602,7 @@ void showBeat(byte count) {
 // after 4 presses use the rolling average time between taps to set the manual BPM.
 // Sample in groupings spaced by X seconds of no-tap apart.
 void handleTap() {
+  togglePWMLED(tap.getState(), BTN_TAP_PIN, BRIGHTNESS_BRIGHT_BLUE, BRIGHTNESS_DIM_BLUE);
   //TODO: this
   // // If programming, take rolling average of taps
   // if (programming) {

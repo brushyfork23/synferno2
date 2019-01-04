@@ -25,7 +25,7 @@ class ButtonGroup{
     boolean hasSelection();
     
   private:
-    byte numPins, toggle, currentSelected;
+    byte numPins, toggle, currentSelected=255;
     byte* led_pins;
     Bounce* buttons;
 

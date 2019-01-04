@@ -28,7 +28,7 @@ ESP8266WebServer server(80);
 
 int offset=0;
 int duration=4;
-int bpm=120;
+int bpm=60;
 int mode=0;
 
 

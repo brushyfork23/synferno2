@@ -26,7 +26,7 @@ boolean ButtonGroup::update() {
   if( ! updateInterval.check() ) return( false );
   updateInterval.reset();
 
-  byte newSelected = -1;
+  byte newSelected = 255;
   boolean hasStateChange = false;
   // read each button
   for (int i = 0; i < this->numPins; i++)  {
@@ -46,8 +46,8 @@ boolean ButtonGroup::update() {
     this->currentSelected = newSelected;
     this->writeLEDs();
     return true;
-  } else if (this->currentSelected != -1 && this->toggle){ // current button was de-selected
-    this->currentSelected = -1;
+  } else if (this->currentSelected != 255 && this->toggle){ // current button was de-selected
+    this->currentSelected = 255;
     this->writeLEDs();
     return true;
   }
@@ -59,7 +59,7 @@ byte ButtonGroup::getValue() {
 }
 
 boolean ButtonGroup::hasSelection() {
-  return this->getValue() >= 0;
+  return this->getValue() != 255;
 }
 
 void ButtonGroup::writeLEDs() {
