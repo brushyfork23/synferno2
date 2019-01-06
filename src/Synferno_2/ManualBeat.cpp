@@ -24,7 +24,7 @@ void ManualBeat::resetCounter() {
   tickCounter = 0;
 }
 
-void ManualBeat::setBPM(unsigned int bpm) {
+void ManualBeat::setBPM(float bpm) {
     clockTickEvery.interval(MILLIS_PER_MINUTE / bpm / CLOCK_TICKS_PER_BEAT);
     clockTickEvery.reset();
 }

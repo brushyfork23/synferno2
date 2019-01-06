@@ -14,17 +14,17 @@
 // A2 to OLED `CS`
 // A8 to Rotary Encoder `A`
 // A9 to Rotary Encoder `B`
+// 2 to Pushbutton Fire 0 `LED`
+// 3 to Pushbutton Fire 1 `LED`
+// 4 to Pushbutton Fire 3 `LED`
+// 5 to Pushbutton Fire 4 `LED`
 // 6 to Pushbutton Zero `LED`
 // 7 to Pushbutton Freq 0 `LED`
 // 8 to Pushbutton Freq 1 `LED`
 // 9 to Pushbutton Freq 2 `LED`
 // 10 to Pushbutton Freq 3 `LED`
 // 11 to Pushbutton Freq 4 `LED`
-// 2 to Pushbutton Fire 0 `LED`
-// 3 to Pushbutton Fire 1 `LED`
 // 12 to Pushbutton Fire 2 `LED`
-// 4 to Pushbutton Fire 3 `LED`
-// 5 to Pushbutton Fire 4 `LED`
 // 13 to Pushbutton Tap `LED`
 // 16 to MIDI `rx`
 // 17 to MIDI `tx`
@@ -119,7 +119,6 @@ Solenoid fireA, fireB, fireC, fireD;
 
 // Push buttons
 #include "Button.h"
-#include "Metro.h"
 #define BRIGHTNESS_BRIGHT_RED 255
 #define BRIGHTNESS_DIM_RED 20
 #define BRIGHTNESS_BRIGHT_BLUE 245
@@ -158,7 +157,7 @@ ButtonGroup frequency;
  * Begin Menu
  */
 #include <menu.h>
-#include <menuIO/u8g2Out.h>
+#include <menuIO/U8x8Out.h>
 #include <menuIO/keyIn.h>
 #include <SPI.h>
 using namespace Menu;
@@ -168,34 +167,15 @@ using namespace Menu;
 #define OLED_CS A2
 #define OLED_DC 22
 #define OLED_RST 23
-#define fontName u8g2_font_7x13_mf
-#define fontX 7
-#define fontY 16
-#define offsetX 0
-#define offsetY 3
-#define U8_Width 128
-#define U8_Height 64
 #define USE_HWI2C
-U8G2_SSD1309_128X64_NONAME0_1_4W_SW_SPI u8g2(U8G2_R0, SCL, SDA, OLED_CS, OLED_DC, OLED_RST);
-// define menu colors --------------------------------------------------------
-//each color is in the format:
-//  {{disabled normal,disabled selected},{enabled normal,enabled selected, enabled editing}}
-// this is a monochromatic color table
-const colorDef<uint8_t> colors[] MEMMODE={
-  {{0,0},{0,1,1}},//bgColor
-  {{1,1},{1,0,0}},//fgColor
-  {{1,1},{1,0,0}},//valColor
-  {{1,1},{1,0,0}},//unitColor
-  {{0,1},{0,0,1}},//cursorColor
-  {{1,1},{1,0,0}},//titleColor
-};
+U8X8_SSD1309_128X64_NONAME0_4W_SW_SPI u8x8(SCL, SDA, OLED_CS, OLED_DC, OLED_RST);
 
 #define MODE_MIDI 0
 #define MODE_MANUAL 1
 boolean hasConfigChange = false;
 int offset=0;
 int duration=4;
-int bpm=60;
+float bpm=60.0;
 int mode=MODE_MIDI;
 
 TOGGLE(mode,modeMenu,"Mode     ",doNothing,noEvent,noStyle
@@ -203,10 +183,10 @@ TOGGLE(mode,modeMenu,"Mode     ",doNothing,noEvent,noStyle
   ,VALUE("Manual",MODE_MANUAL,selectManual,exitEvent)
 );
 
-MENU(mainMenu,"SYNFERNO",doNothing,noEvent,noStyle
+MENU(mainMenu,"   SYNFERNO",doNothing,noEvent,noStyle
   ,FIELD(offset,"Offset  ","",0,24,1,0,configUpdate,exitEvent,noStyle)
   ,FIELD(duration,"Duration","",0,24,1,0,configUpdate,exitEvent,noStyle)
-  ,FIELD(bpm,"BPM     ","",0,300,10,1,editBPM,exitEvent,noStyle)
+  ,FIELD(bpm,"BPM     ","",0.0,300.0,1.0,0.1,editBPM,exitEvent,noStyle)
   ,SUBMENU(modeMenu)
 );
 
@@ -246,7 +226,7 @@ ClickEncoderStream encStream(clickEncoder,2);
 void timerIsr() {clickEncoder.service();}
 
 MENU_OUTPUTS(out,MAX_DEPTH
-  ,U8G2_OUT(u8g2,colors,fontX,fontY,offsetX,offsetY,{0,0,U8_Width/fontX,U8_Height/fontY})
+  ,U8X8_OUT(u8x8,{0,0,16,8})
   ,NONE
 );
   
@@ -266,11 +246,20 @@ void setup() {
 
   // fire up the Screen
   SPI.begin();
-  u8g2.begin();
-  u8g2.setFont(fontName);
+  u8x8.begin();
+  /*
+  u8x8_font_artossans8_r
+  u8x8_font_victoriamedium8_r
+  u8x8_font_pxplusibmcgathin_f
+  u8x8_font_pxplusibmcga_f
+  u8x8_font_pressstart2p_f
+  u8x8_font_pxplustandynewtv_f
+  */
+  u8x8.setFont(u8x8_font_artossans8_r);
 
   // configure Menu
   nav.showTitle=false;
+  mainMenu[2].enabled=disabledStatus;
 
   // fire up the rotary encoder
   //clickEncoder.setAccelerationEnabled(false);
@@ -342,11 +331,7 @@ void setup() {
 
 void loop() {
   // 0. handle rotary encoder menu
-  nav.doInput();
-  if (nav.changed(0)) {
-    u8g2.firstPage();
-    do nav.doOutput(); while(u8g2.nextPage());
-  }
+  nav.poll();
   
   // 1. handle web portal
   // send updates
@@ -425,14 +410,6 @@ void loop() {
 
     // we have a MIDI signal to follow, or a manual beat
     byte counter = getClockCounter();
-    if (counter%CLOCK_TICKS_PER_BEAT==0) {
-      Serial.print("PERB counter: ");
-      Serial.println(counter);
-    }
-    if (counter%clocksPerTrigger==0 ){
-      Serial.print("TRIG counter: ");
-      Serial.println(counter);
-    }
 
     // how far back from the poof do we need to trigger the hardware?
     byte fireOnAt = (clocksPerTrigger - offset) % clocksPerTrigger;

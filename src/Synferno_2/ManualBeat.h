@@ -24,7 +24,7 @@ class ManualBeat{
 
     void resetCounter(); // set counter back to 0
 
-    void setBPM(unsigned int bpm);
+    void setBPM(float bpm);
     
   private:
     byte tickCounter;
