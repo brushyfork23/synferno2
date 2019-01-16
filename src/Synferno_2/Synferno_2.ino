@@ -148,6 +148,7 @@ Button tap;
 // Frequency buttons
 #include "ButtonGroup.h"
 #define NUM_FREQUENCY_BUTTONS 5
+#define FREQUENCY_SCALE 4
 byte FREQUENCY_BUTTON_PINS[NUM_FREQUENCY_BUTTONS] = {29, 30, 31, 32, 33};
 byte FREQUENCY_LED_PINS[NUM_FREQUENCY_BUTTONS] = {7, 8, 9, 10, 11};
 ButtonGroup frequency;
@@ -173,9 +174,9 @@ U8X8_SSD1309_128X64_NONAME0_4W_SW_SPI u8x8(SCL, SDA, OLED_CS, OLED_DC, OLED_RST)
 #define MODE_MIDI 0
 #define MODE_MANUAL 1
 boolean hasConfigChange = false;
+int duration=2;
+float bpm=120.0;
 int offset=0;
-int duration=4;
-float bpm=60.0;
 int mode=MODE_MIDI;
 
 TOGGLE(mode,modeMenu,"Mode     ",doNothing,noEvent,noStyle
@@ -184,9 +185,9 @@ TOGGLE(mode,modeMenu,"Mode     ",doNothing,noEvent,noStyle
 );
 
 MENU(mainMenu,"   SYNFERNO",doNothing,noEvent,noStyle
-  ,FIELD(offset,"Offset  ","",0,24,1,0,configUpdate,exitEvent,noStyle)
-  ,FIELD(duration,"Duration","",0,24,1,0,configUpdate,exitEvent,noStyle)
+  ,FIELD(duration,"Duration","",0,23,1,0,configUpdate,exitEvent,noStyle)
   ,FIELD(bpm,"BPM     ","",0.0,300.0,1.0,0.1,editBPM,exitEvent,noStyle)
+  ,FIELD(offset,"Offset  ","",0,23,1,0,configUpdate,exitEvent,noStyle)
   ,SUBMENU(modeMenu)
 );
 
@@ -212,18 +213,13 @@ result editBPM() {
 
 result configUpdate() {
   hasConfigChange = true;
-  Serial.println("config updated");
   return proceed;
 }
 
 
-//#define ENC_DECODER ENC_FLAKY
-#include <ClickEncoder.h>
 #include <menuIO/clickEncoderIn.h>
-#include <TimerOne.h>
 ClickEncoder clickEncoder(ENC_A,ENC_B,ENC_BTN,2);
 ClickEncoderStream encStream(clickEncoder,2);
-void timerIsr() {clickEncoder.service();}
 
 MENU_OUTPUTS(out,MAX_DEPTH
   ,U8X8_OUT(u8x8,{0,0,16,8})
@@ -238,7 +234,6 @@ NAVROOT(nav,mainMenu,MAX_DEPTH,encStream,out);
 
 // Local variables
 byte clocksPerTrigger = CLOCK_TICKS_PER_BEAT;
-unsigned long microsBetweenTaps;
 
 void setup() {
   Serial.begin(115200);
@@ -260,11 +255,6 @@ void setup() {
   // configure Menu
   nav.showTitle=false;
   mainMenu[2].enabled=disabledStatus;
-
-  // fire up the rotary encoder
-  //clickEncoder.setAccelerationEnabled(false);
-  Timer1.initialize(1000);
-  Timer1.attachInterrupt(timerIsr);
 
   // fire up MIDI
   midi.begin();
@@ -331,12 +321,20 @@ void setup() {
 
 void loop() {
   // 0. handle rotary encoder menu
-  nav.poll();
+  static Metro encoderUpdate(1UL);
+  if (encoderUpdate.check()) {
+    clickEncoder.service();
+    encoderUpdate.reset();
+  }
+   static Metro navInterval(1UL);
+   if (navInterval.check()) {
+     navInterval.reset();
+    nav.poll();
+   }
   
   // 1. handle web portal
   // send updates
   if (hasConfigChange) {
-    Serial.println("sending updated config to web server.");
     hasConfigChange = false;
     // Serial1.print(offset);
     // Serial1.print(duration);
@@ -354,7 +352,7 @@ void loop() {
   // 2. update the inputs
   if (mode == MODE_MANUAL) {
     // handle tap button
-    if (tap.update()) {
+    if (tap.update() && !tap.getState()) {
       handleTap();
     }
   }
@@ -376,12 +374,11 @@ void loop() {
         clocksPerTrigger = 6;
         break;
     }
-    //clocksPerTrigger = map(frequency.getValue(), 0, NUM_FREQUENCY_BUTTONS-1, CLOCK_TICKS_PER_BEAT*SCALE, CLOCK_TICKS_PER_BEAT/SCALE);
-    Serial.print("set clocks per trigger: ");
-    Serial.println(clocksPerTrigger);
+    // const int frequencyMultiplier = CLOCK_TICKS_PER_BEAT / FREQUENCY_SCALE;
+    // clocksPerTrigger = (NUM_FREQUENCY_BUTTONS - frequency.getValue()) * frequencyMultiplier;
   }
   if (zero.update()) {
-    togglePWMLED(tap.getState(), BTN_TAP_PIN, BRIGHTNESS_BRIGHT_BLUE, BRIGHTNESS_DIM_BLUE);
+    togglePWMLED(zero.getState(), LED_ZERO_PIN, BRIGHTNESS_BRIGHT_BLUE, BRIGHTNESS_DIM_BLUE);
     if (zero.getState()) {
       // reset button has just been pressed.  Reset the clock counters.
       resetClockCounter();
@@ -422,6 +419,9 @@ void loop() {
 
     // report tick, noting we do this after the hardware-level update
     showBeat(counter % CLOCK_TICKS_PER_BEAT);
+
+    // report stanza beginning
+    showStanza(counter);
   }
 
   // 4. override with the Make Fire Now buttons
@@ -432,25 +432,21 @@ void loop() {
   // if the Fire-All button isn't held, use the individual poofers' buttons to toggle them.
   if (fireANow.update()) {
     if (!fireAllNow.getState()) {
-      Serial.println("manual fire A state toggle.");
       firePoofer(&fireA, fireANow.getState());
     }
   }
   if (fireBNow.update()) {
     if (!fireAllNow.getState()) {
-      Serial.println("manual fire B state toggle.");
       firePoofer(&fireB, fireBNow.getState());
     }
   }
   if (fireCNow.update()) {
     if (!fireAllNow.getState()) {
-      Serial.println("manual fire C state toggle.");
       firePoofer(&fireC, fireCNow.getState());
     }
   }
   if (fireDNow.update()) {
     if (!fireAllNow.getState()) {
-      Serial.println("manual fire D state toggle.");
       firePoofer(&fireD, fireDNow.getState());
     }
   }
@@ -459,11 +455,9 @@ void loop() {
   // When it's released, extinguish all those not individually held.
   if (fireAllNowStateChanged) {
     if (fireAllNow.getState()) {
-      Serial.println("BOOOOSH!");
       // fire all poofers
       fireAllPoofers(true);
     } else {
-      Serial.println("fire all toggled off.");
       if (!fireANow.getState()) {
         firePoofer(&fireA, false);
       }
@@ -574,29 +568,54 @@ void showBeat(byte count) {
   }
 }
 
+void showStanza(byte count) {
+  static byte lastCount = 255;
+  if ( lastCount != count ) {
+    lastCount = count;
+    if ( count == 0 ) {
+      analogWrite(LED_ZERO_PIN, BRIGHTNESS_BRIGHT_BLUE);
+    }
+    if ( count == 2 ) {
+      analogWrite(LED_ZERO_PIN, BRIGHTNESS_DIM_BLUE);
+    }
+  }
+}
+
 // Listen for manually programmed beat.
 // Called every time the tap button is pressed, 
 // after 4 presses use the rolling average time between taps to set the manual BPM.
 // Sample in groupings spaced by X seconds of no-tap apart.
+#define MILLIS_PER_MINUTE 60000UL
+#define TAP_PROGRAMMING_EXPIRY_WINDOW_MILLIS 1700UL
+#define TAPS_BEFORE_WRITE 4
+unsigned long millisPerBeat;
 void handleTap() {
-  togglePWMLED(tap.getState(), BTN_TAP_PIN, BRIGHTNESS_BRIGHT_BLUE, BRIGHTNESS_DIM_BLUE);
-  //TODO: this
-  // // If programming, take rolling average of taps
-  // if (programming) {
-  //   if (isNewSampleGroup) {
-  //     lastTap = micros();
-  //     microsBetweenTaps = 0;
-  //   }
-  //   // time the tap
-  //   static unsigned long lastTap = micros();
-  //   unsigned long thisTap = micros();
-  //   unsigned long deltaTap = thisTap - lastTap;
-  //   lastTap = thisTap;
+  // time the tap
+  static unsigned long lastTap = millis();
+  unsigned long thisTap = millis();
+  unsigned long deltaTap = thisTap - lastTap;
+  lastTap = thisTap;
+  static int taps = 0;
+  bool forceTapUpdate = false;
+  if (forceTapUpdate || deltaTap > TAP_PROGRAMMING_EXPIRY_WINDOW_MILLIS) {
+    taps = 0;
+  }
 
-  //   // apply exponential smoothing
-  //   const word smoothTap = 100;
-  //   microsBetweenTaps = (microsBetweenTaps*(smoothTap-1) + deltaTap)/smoothTap;
-  // }
+  if (taps % FREQUENCY_SCALE == 0) {
+    resetClockCounter();
+  }
+  if (taps++ == 0) {
+    return;
+  }
+  
+  // smooth delta between taps
+  const word smoothDelta = 2;
+  millisPerBeat = (millisPerBeat*(smoothDelta-1) + deltaTap)/smoothDelta;
+
+  if (taps >= TAPS_BEFORE_WRITE) {
+    bpm = 60000.0 / millisPerBeat;
+    manualBeat.setBPM(bpm);
+  }
 }
 
 void resetClockCounter() {
