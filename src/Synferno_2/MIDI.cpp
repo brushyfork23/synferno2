@@ -1,5 +1,4 @@
 #include "MIDI.h"
-#include <Streaming.h> // TODO: can this be removed?
 
 void MIDI::begin() {
   // give MIDI-device a short time to "digest" MIDI messages

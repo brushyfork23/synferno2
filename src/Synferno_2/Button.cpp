@@ -10,6 +10,7 @@ void Button::begin(byte pin, boolean pressedValue) {
   this->update();
 }
 
+// Pressed state edge detection.  Return true when the button is pressed or depressed; false otherwise.
 boolean Button::update() {
    // there's no good reason to sample more than 1/ms.  Nyquist frequency, etc.
   static Metro updateInterval(1UL);

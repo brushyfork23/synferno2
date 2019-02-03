@@ -1,4 +1,3 @@
-
 // Compile for Arduino Mega 2560
 
 // Arduino Mega 2560: https://smile.amazon.com/Elegoo-EL-CB-003-ATmega2560-ATMEGA16U2-Arduino/dp/B01H4ZLZLQ
@@ -102,6 +101,14 @@
 // + to Buck Converter `+5`
 // - to GND
 
+// Required libraries
+// ArduinoStreaming: https://github.com/geneReeves/ArduinoStreaming
+// Metro: https://github.com/thomasfredericks/Metro-Arduino-Wiring
+// Bounce2: https://github.com/thomasfredericks/Bounce2
+// ArduinoMenu: https://github.com/neu-rah/ArduinoMenu
+// > encoder: https://github.com/christophepersoz/encoder
+// U8g2: https://github.com/olikraus/U8g2_Arduino
+
 #include <Streaming.h>
 #include <Metro.h>
 
@@ -121,7 +128,7 @@ Solenoid fireA, fireB, fireC, fireD;
 #include "Button.h"
 #define BRIGHTNESS_BRIGHT_RED 255
 #define BRIGHTNESS_DIM_RED 20
-#define BRIGHTNESS_BRIGHT_BLUE 245
+#define BRIGHTNESS_BRIGHT_BLUE 180
 #define BRIGHTNESS_DIM_BLUE 15
 #define BTN_FIRE_0_PIN 34
 #define BTN_FIRE_1_PIN 35
@@ -185,9 +192,9 @@ TOGGLE(mode,modeMenu,"Mode     ",doNothing,noEvent,noStyle
 );
 
 MENU(mainMenu,"   SYNFERNO",doNothing,noEvent,noStyle
-  ,FIELD(duration,"Duration","",0,23,1,0,configUpdate,exitEvent,noStyle)
-  ,FIELD(bpm,"BPM     ","",0.0,300.0,1.0,0.1,editBPM,exitEvent,noStyle)
+  ,FIELD(duration,"Duration","",1,23,1,0,configUpdate,exitEvent,noStyle)
   ,FIELD(offset,"Offset  ","",0,23,1,0,configUpdate,exitEvent,noStyle)
+  ,FIELD(bpm,"BPM     ","",0.0,300.0,1.0,0.1,editBPM,exitEvent,noStyle)
   ,SUBMENU(modeMenu)
 );
 
@@ -421,7 +428,9 @@ void loop() {
     showBeat(counter % CLOCK_TICKS_PER_BEAT);
 
     // report stanza beginning
-    showStanza(counter);
+    if (!zero.getState()){
+      showStanza(counter);
+    }
   }
 
   // 4. override with the Make Fire Now buttons
