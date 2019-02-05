@@ -241,6 +241,7 @@ NAVROOT(nav,mainMenu,MAX_DEPTH,encStream,out);
 
 // Local variables
 byte clocksPerTrigger = CLOCK_TICKS_PER_BEAT;
+bool beatSaysFire = false;
 
 void setup() {
   Serial.begin(115200);
@@ -393,25 +394,12 @@ void loop() {
   }
 
   // 3. check beat for firing status
-  // if there's no MIDI signal or manual beat and we're not manually firing, shut it down.
-  if( getClockCounter()==255 && !fireAllNow.getState() ) {
-    // shut it down
-    if (!fireANow.getState()) {
-      fireA.off();
-    }
-    if (!fireBNow.getState()) {
-      fireB.off();
-    }
-    if (!fireCNow.getState()) {
-      fireC.off();
-    }
-    if (!fireDNow.getState()) {
-      fireD.off();
-    }
+  // if we have no beat (manual or MIDI), shut it down.
+  if (getClockCounter()==255) {
+    beatSaysFire = false;
   }
-  // if we have a clock tick, a firing frequency, and we're not manually firing, do stuff.
-  if( updateClockCounter() && !fireAllNow.getState()) {
-
+  // if we have a clock tick, update the firing status and beat indicators.
+  if( updateClockCounter() ) {
     // we have a MIDI signal to follow, or a manual beat
     byte counter = getClockCounter();
 
@@ -422,7 +410,7 @@ void loop() {
     byte fireOffAt = (fireOnAt + duration) % clocksPerTrigger;
 
     // given the current counter and on/off times, should we shoot fire or not?
-    fireAllPoofers( frequency.hasSelection() && timeForFire( counter % clocksPerTrigger, fireOnAt, fireOffAt ) );
+    beatSaysFire = frequency.hasSelection() && timeForFire( counter % clocksPerTrigger, fireOnAt, fireOffAt );
 
     // report tick, noting we do this after the hardware-level update
     showBeat(counter % CLOCK_TICKS_PER_BEAT);
@@ -433,52 +421,50 @@ void loop() {
     }
   }
 
-  // 4. override with the Make Fire Now buttons
-  boolean fireAllNowStateChanged = fireAllNow.update();
-  if (fireAllNowStateChanged) {
-    togglePWMLED(fireAllNow.getState(), LED_FIRE_2_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
-  }
-  // if the Fire-All button isn't held, use the individual poofers' buttons to toggle them.
-  if (fireANow.update()) {
-    if (!fireAllNow.getState()) {
-      firePoofer(&fireA, fireANow.getState());
+  // 4. Turn poofers on or off.
+  // update the state of the manual fire buttons
+  fireAllNow.update();
+  fireANow.update();
+  fireBNow.update();
+  fireCNow.update();
+  fireDNow.update();
+  // if any of the relevant states of buttons or clicks indicate that
+  // it's time to fire, ensure the poofer is lit.  Otherwise, ensure
+  // that it is extinguished.
+  if (fireAllNow.getState() || fireANow.getState() || beatSaysFire) {
+    if (!fireA.getState()) {
+      fireA.on();
+    }
+  } else {
+    if (fireA.getState()) {
+      fireA.off();
     }
   }
-  if (fireBNow.update()) {
-    if (!fireAllNow.getState()) {
-      firePoofer(&fireB, fireBNow.getState());
+  if (fireAllNow.getState() || fireBNow.getState() || beatSaysFire) {
+    if (!fireB.getState()) {
+      fireB.on();
+    }
+  } else {
+    if (fireB.getState()) {
+      fireB.off();
     }
   }
-  if (fireCNow.update()) {
-    if (!fireAllNow.getState()) {
-      firePoofer(&fireC, fireCNow.getState());
+  if (fireAllNow.getState() || fireCNow.getState() || beatSaysFire) {
+    if (!fireC.getState()) {
+      fireC.on();
+    }
+  } else {
+    if (fireC.getState()) {
+      fireC.off();
     }
   }
-  if (fireDNow.update()) {
-    if (!fireAllNow.getState()) {
-      firePoofer(&fireD, fireDNow.getState());
+  if (fireAllNow.getState() || fireDNow.getState() || beatSaysFire) {
+    if (!fireD.getState()) {
+      fireD.on();
     }
-  }
-
-  // When the Fire-All button is pressed, poof all poofers.
-  // When it's released, extinguish all those not individually held.
-  if (fireAllNowStateChanged) {
-    if (fireAllNow.getState()) {
-      // fire all poofers
-      fireAllPoofers(true);
-    } else {
-      if (!fireANow.getState()) {
-        firePoofer(&fireA, false);
-      }
-      if (!fireBNow.getState()) {
-        firePoofer(&fireB, false);
-      }
-      if (!fireCNow.getState()) {
-        firePoofer(&fireC, false);
-      }
-      if (!fireDNow.getState()) {
-        firePoofer(&fireD, false);
-      }
+  } else {
+    if (fireD.getState()) {
+      fireD.off();
     }
   }
   
@@ -529,30 +515,6 @@ boolean timeForFire( byte clock, byte start, byte stop ) {
   if( clock >= stop && clock < start ) return( false );
   else return( true );
   
-}
-
-// BOOOOSH!  Fire all the poofers!
-void fireAllPoofers(boolean doFire) {
-  if ( doFire ) {
-    fireA.on();
-    fireB.on();
-    fireC.on();
-    fireD.on();
-  } else {
-    fireA.off();
-    fireB.off();
-    fireC.off();
-    fireD.off();
-  }
-}
-
-// BOOOOSH!  Fire one of the poofers.
-void firePoofer(Solenoid *poofer, boolean makeFire) {
-  if (makeFire) {
-    poofer->on();
-  } else {
-    poofer->off();
-  }
 }
 
 // brighten or dim an LED based on a state
@@ -618,7 +580,7 @@ void handleTap() {
   }
   
   // smooth delta between taps
-  const word smoothDelta = 2;
+  const word smoothDelta = 3;
   millisPerBeat = (millisPerBeat*(smoothDelta-1) + deltaTap)/smoothDelta;
 
   if (taps >= TAPS_BEFORE_WRITE) {
