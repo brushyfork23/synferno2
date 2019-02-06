@@ -241,7 +241,9 @@ NAVROOT(nav,mainMenu,MAX_DEPTH,encStream,out);
 
 // Local variables
 byte clocksPerTrigger = CLOCK_TICKS_PER_BEAT;
+float suspendedAtBPM;
 bool beatSaysFire = false;
+bool suspendBeatReactions = false;
 
 void setup() {
   Serial.begin(115200);
@@ -357,13 +359,14 @@ void loop() {
   //   mode = Serial1.read();
   // }
   
-  // 2. update the inputs
+  // 2. handle tap button
   if (mode == MODE_MANUAL) {
-    // handle tap button
     if (tap.update() && !tap.getState()) {
       handleTap();
     }
   }
+
+  // 3. handle frequency selection button group
   if ( frequency.update() && frequency.hasSelection() ) {
     switch (frequency.getValue()) {
       case 0:
@@ -385,44 +388,46 @@ void loop() {
     // const int frequencyMultiplier = CLOCK_TICKS_PER_BEAT / FREQUENCY_SCALE;
     // clocksPerTrigger = (NUM_FREQUENCY_BUTTONS - frequency.getValue()) * frequencyMultiplier;
   }
+  
+  // 4. handle zero button
+  static Metro holdToSuspend(1700UL);
+  // If the zero button is momentarily pressed, reset the clock counters. This marks the beginning of a stanza.
   if (zero.update()) {
     togglePWMLED(zero.getState(), LED_ZERO_PIN, BRIGHTNESS_BRIGHT_BLUE, BRIGHTNESS_DIM_BLUE);
     if (zero.getState()) {
-      // reset button has just been pressed.  Reset the clock counters.
+      holdToSuspend.reset();
+      suspendBeatReactions = false;
       resetClockCounter();
     }
   }
+  // If the zero button is held, suspend beat reactions until a new BPM is detected
+  // or the zero button is pressed again.
+  if (zero.getState()) {
+    if (holdToSuspend.check()) {
+      // record the current BPM
+      suspendedAtBPM = bpm;
+      // set flag to suspend beat reactions
+      suspendBeatReactions = true;
+      // ensure beat does not trigger fire
+      beatSaysFire = false;
+      // turn off the Zero button's LED
+      togglePWMLED(false, LED_ZERO_PIN, BRIGHTNESS_BRIGHT_BLUE, BRIGHTNESS_DIM_BLUE);
+    }
+  }
 
-  // 3. check beat for firing status
+  // 5. handle beat
   // if we have no beat (manual or MIDI), shut it down.
   if (getClockCounter()==255) {
     beatSaysFire = false;
   }
   // if we have a clock tick, update the firing status and beat indicators.
   if( updateClockCounter() ) {
-    // we have a MIDI signal to follow, or a manual beat
-    byte counter = getClockCounter();
-
-    // how far back from the poof do we need to trigger the hardware?
-    byte fireOnAt = (clocksPerTrigger - offset) % clocksPerTrigger;
-    
-    // and when do we need to turn it off?
-    byte fireOffAt = (fireOnAt + duration) % clocksPerTrigger;
-
-    // given the current counter and on/off times, should we shoot fire or not?
-    beatSaysFire = frequency.hasSelection() && timeForFire( counter % clocksPerTrigger, fireOnAt, fireOffAt );
-
-    // report tick, noting we do this after the hardware-level update
-    showBeat(counter % CLOCK_TICKS_PER_BEAT);
-
-    // report stanza beginning
-    if (!zero.getState()){
-      showStanza(counter);
-    }
+    handleBeat();
   }
 
-  // 4. Turn poofers on or off.
-  // update the state of the manual fire buttons
+  // 6. handle poofers
+  // Turn the poofers on or off, depending on beat and buttons.
+  // update the state of the fire-now buttons
   fireAllNow.update();
   fireANow.update();
   fireBNow.update();
@@ -468,7 +473,8 @@ void loop() {
     }
   }
   
-  // 5. report changes in firing status (change in solenoid state)
+  // 7. handle fire indicators
+  // Report changes in firing status (change in solenoid state) by lighting the fire-now buttons.
   if ( fireA.update() ) {
     togglePWMLED(fireA.getState(), LED_FIRE_0_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
   }
@@ -497,6 +503,37 @@ void loop() {
     counter = 0;
     updateInterval.reset();
   }
+}
+
+// determine firing time and updatedisplay beat information
+void handleBeat() {
+    byte counter = getClockCounter();
+
+    // ensure beat reactions are enabled
+    if (suspendBeatReactions) {
+      // when the BPM changes, resume operation
+      if (suspendedAtBPM == bpm) {
+        return;
+      }
+      suspendBeatReactions = false;
+    }
+
+    // how far back from the poof do we need to trigger the hardware?
+    byte fireOnAt = (clocksPerTrigger - offset) % clocksPerTrigger;
+    
+    // and when do we need to turn it off?
+    byte fireOffAt = (fireOnAt + duration) % clocksPerTrigger;
+
+    // given the current counter and on/off times, should we shoot fire or not?
+    beatSaysFire = frequency.hasSelection() && timeForFire( counter % clocksPerTrigger, fireOnAt, fireOffAt );
+
+    // report tick, noting we do this after the hardware-level update
+    showBeat(counter % CLOCK_TICKS_PER_BEAT);
+
+    // report stanza beginning
+    if (!zero.getState()){
+      showStanza(counter);
+    }
 }
 
 // helper function to work through the modulo-24 stuff.  PITA.
