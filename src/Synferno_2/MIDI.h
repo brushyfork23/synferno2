@@ -17,8 +17,7 @@
                 // although there are 24 ticks per beat, if we want to trigger every four
                 // beats then we'll need to count up to CLOCK_TICKS_PER_BEAT * SCALE
 
-#define SIMULATE_MIDI 0
-#define SIMULATE_BPM 120.0
+#define MICROS_PER_MINUTE 60000000UL
 
 class MIDI{
   public:
@@ -30,15 +29,17 @@ class MIDI{
 
     void resetCounter(); // set counter back to 0
 
-    unsigned long tickLength(); // length of ticks, uS
-    unsigned long beatLength();  // length of 24 ticks (one beat), ms
+    float getBPM();
     
   private:
-    byte clockCounter;
+    byte clockCounter, windowIndex;
+    float bpm;
 
-    unsigned long tickDuration, beatDuration;
+    unsigned long microsPerTick;
+    unsigned long microsPetTickDeltas[CLOCK_TICKS_PER_BEAT];
     
     void processTick();
+    static unsigned long sort_desc(const void *cmp1, const void *cmp2);
 };
 
 #endif

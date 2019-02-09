@@ -5,9 +5,9 @@ void MIDI::begin() {
   Serial2.begin(31250);
   delay(100);
 
-  clockCounter = 255; // no MIDI signal; we're "off the clock".
-  tickDuration = 20833; // us, 120 bpm
-  beatDuration = 500; // ms, 120 bpm
+  
+  this->clockCounter = 255; // no MIDI signal; we're "off the clock".
+  this->microsPerTick = 500000 / CLOCK_TICKS_PER_BEAT; // 120 bpm
 }
 
 boolean MIDI::update() {
@@ -24,19 +24,6 @@ boolean MIDI::update() {
     if (midiByte == MIDI_CLOCK) {
       timeoutMIDI.reset();
       processTick();
-      return ( true );
-    }
-  }
-
-  if ( SIMULATE_MIDI ) {
-    const float beatEvery = 60.0 * 1000.0 / CLOCK_TICKS_PER_BEAT / SIMULATE_BPM; // ms/tick
-    static Metro clockEvery(beatEvery);
-    if ( clockEvery.check() ) {
-      clockEvery.reset();
-
-      timeoutMIDI.reset();
-      processTick();
-
       return ( true );
     }
   }
@@ -64,32 +51,37 @@ void MIDI::processTick() {
   unsigned long deltaTick = thisTick - lastTick;
   lastTick = thisTick;
 
-  // apply exponential smoothing, in case we miss a tick
-  const word smoothTick = 100;
-  tickDuration = (tickDuration*(smoothTick-1) + deltaTick)/smoothTick;
+  // store a rolling window of micros-between-ticks deltas
+  microsPetTickDeltas[windowIndex] = deltaTick;
+  if (++windowIndex % CLOCK_TICKS_PER_BEAT == 0) {
+    windowIndex = 0;
+  }
 
-  // time the beats
-  if( clockCounter % CLOCK_TICKS_PER_BEAT == 0 ) {
-    // time the beats
-    static unsigned long lastBeat = millis();
-    unsigned long thisBeat = millis();
-    unsigned long deltaBeat = thisBeat - lastBeat;
-    lastBeat = thisBeat;
-    
-    // apply exponential smoothing, in case we miss a tick
-    const word smoothBeat = 20;
-    beatDuration = (beatDuration*(smoothBeat-1) + deltaBeat)/smoothBeat;
+  // sort the window
+  qsort(microsPetTickDeltas, CLOCK_TICKS_PER_BEAT, sizeof(microsPetTickDeltas[0]), this->sort_desc);
 
+  // smooth the median delta
+  unsigned long medianDelta = microsPetTickDeltas[CLOCK_TICKS_PER_BEAT/2];
+  const word smoothFactor = 20;
+  microsPerTick = (microsPerTick*(smoothFactor-1) + medianDelta)/smoothFactor;
+
+  // every quarter beat, update the BPM
+  if (clockCounter % (CLOCK_TICKS_PER_BEAT / SCALE) == 0 && microsPerTick > 0) {
+    this->bpm = MICROS_PER_MINUTE * 1.0 / CLOCK_TICKS_PER_BEAT / microsPerTick;
+    return;
   }
 }
 
-unsigned long MIDI::tickLength() {
-  // length of ticks, uS
-  return( this->tickDuration );
-}
-unsigned long MIDI::beatLength() {
-  // length of 24 ticks (one beat), ms
-  return( this->beatDuration );
+float MIDI::getBPM() {
+  return( this->bpm );
 }
 
-
+// qsort requires you to create a sort function
+static unsigned long MIDI::sort_desc(const void *cmp1, const void *cmp2)
+{
+  // Need to cast the void * to unsigned long *
+  unsigned long a = *((unsigned long *)cmp1);
+  unsigned long b = *((unsigned long *)cmp2);
+  // The comparison
+  return b - a;
+}

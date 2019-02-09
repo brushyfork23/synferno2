@@ -505,6 +505,17 @@ void loop() {
   }
 }
 
+boolean updateClockCounter() {
+  boolean hasMidiUpdate = midi.update();
+  boolean hasManualUpdate = manualBeat.update();
+  if (mode == MODE_MIDI) {
+    bpm = midi.getBPM();
+    return hasMidiUpdate;
+  } else {
+    return hasManualUpdate;
+  }
+}
+
 // determine firing time and updatedisplay beat information
 void handleBeat() {
     byte counter = getClockCounter();
@@ -593,35 +604,31 @@ void showStanza(byte count) {
 // Called every time the tap button is pressed, 
 // after 4 presses use the rolling average time between taps to set the manual BPM.
 // Sample in groupings spaced by X seconds of no-tap apart.
-#define MILLIS_PER_MINUTE 60000UL
-#define TAP_PROGRAMMING_EXPIRY_WINDOW_MILLIS 1700UL
+#define MICROS_PER_MINUTE 60000000UL
+#define TAP_PROGRAMMING_EXPIRY_WINDOW_MICROS 1700000UL
 #define TAPS_BEFORE_WRITE 4
-unsigned long millisPerBeat;
+unsigned long microsPerBeat;
 void handleTap() {
   // time the tap
-  static unsigned long lastTap = millis();
-  unsigned long thisTap = millis();
+  static unsigned long lastTap = micros();
+  unsigned long thisTap = micros();
   unsigned long deltaTap = thisTap - lastTap;
   lastTap = thisTap;
   static int taps = 0;
-  bool forceTapUpdate = false;
-  if (forceTapUpdate || deltaTap > TAP_PROGRAMMING_EXPIRY_WINDOW_MILLIS) {
+  if (deltaTap > TAP_PROGRAMMING_EXPIRY_WINDOW_MICROS) {
     taps = 0;
   }
 
-  if (taps % FREQUENCY_SCALE == 0) {
-    resetClockCounter();
-  }
   if (taps++ == 0) {
     return;
   }
   
   // smooth delta between taps
   const word smoothDelta = 3;
-  millisPerBeat = (millisPerBeat*(smoothDelta-1) + deltaTap)/smoothDelta;
+  microsPerBeat = (microsPerBeat*(smoothDelta-1) + deltaTap)/smoothDelta;
 
   if (taps >= TAPS_BEFORE_WRITE) {
-    bpm = 60000.0 / millisPerBeat;
+    bpm = MICROS_PER_MINUTE * 1.0 / microsPerBeat;
     manualBeat.setBPM(bpm);
   }
 }
@@ -636,15 +643,5 @@ byte getClockCounter() {
     return midi.getCounter();
   } else {
     return manualBeat.getCounter();
-  }
-}
-
-boolean updateClockCounter() {
-  boolean hasMidiUpdate = midi.update();
-  boolean hasManualUpdate = manualBeat.update();
-  if (mode == MODE_MIDI) {
-    return hasMidiUpdate;
-  } else {
-    return hasManualUpdate;
   }
 }
