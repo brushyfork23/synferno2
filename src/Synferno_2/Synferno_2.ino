@@ -245,6 +245,12 @@ NAVROOT(nav,mainMenu,MAX_DEPTH,encStream,out);
 // Local variables
 byte clocksPerTrigger = CLOCK_TICKS_PER_BEAT;
 boolean beatSaysFire = false;
+boolean lastBeatSaysFire = false;
+boolean beatFireA = false;
+boolean beatFireB = false;
+boolean beatFireC = false;
+boolean beatFireD = false;
+byte firingGroup = 0;
 float suspendedAtBPM;
 boolean suspendBeatReactions = false;
 
@@ -426,6 +432,59 @@ void loop() {
   // if we have a clock tick, update the firing status and beat indicators.
   if( updateClockCounter() ) {
     handleBeat();
+
+    // when beat changes state to firing, update which poofers should be triggered
+    if (beatSaysFire != lastBeatSaysFire) {
+      lastBeatSaysFire = beatSaysFire;
+      if (beatSaysFire) {
+
+        // beatSaysFire has just changed to true, so cycle which poofers are active.
+        if (!tooFastForPoofers(clocksPerTrigger)) {
+          // fire 1 group
+          beatFireA = true;
+          beatFireB = true;
+          beatFireC = true;
+          beatFireD = true;
+        } else if (!tooFastForPoofers(clocksPerTrigger*2)) {
+          // fire 2 groups
+          firingGroup = (firingGroup + 1) % 2;
+          switch(firingGroup) {
+            case 0:
+              beatFireA = true;
+              beatFireD = true;
+              break;
+            case 1:
+              beatFireB = true;
+              beatFireC = true;
+              break;
+          }
+        } else {
+          // fire 4 groups
+          firingGroup = (firingGroup + 1) % 4;
+          switch(firingGroup) {
+            case 0:
+              beatFireC = true;
+              break;
+            case 1:
+              beatFireA = true;
+              break;
+            case 2:
+              beatFireB = true;
+              break;
+            case 3:
+              beatFireD = true;
+              break;
+          }
+        }
+
+      }
+    }
+  }
+  if (!beatSaysFire) {
+    beatFireA = false;
+    beatFireB = false;
+    beatFireC = false;
+    beatFireD = false;
   }
 
   // 6. handle poofers
@@ -439,7 +498,7 @@ void loop() {
   // if any of the relevant states of buttons or clicks indicate that
   // it's time to fire, ensure the poofer is lit.  Otherwise, ensure
   // that it is extinguished.
-  if (fireAllNow.getState() || fireANow.getState() || beatSaysFire) {
+  if (fireAllNow.getState() || fireANow.getState() || beatFireA) {
     if (!fireA.getState()) {
       fireA.on();
     }
@@ -448,7 +507,7 @@ void loop() {
       fireA.off();
     }
   }
-  if (fireAllNow.getState() || fireBNow.getState() || beatSaysFire) {
+  if (fireAllNow.getState() || fireBNow.getState() || beatFireB) {
     if (!fireB.getState()) {
       fireB.on();
     }
@@ -457,7 +516,7 @@ void loop() {
       fireB.off();
     }
   }
-  if (fireAllNow.getState() || fireCNow.getState() || beatSaysFire) {
+  if (fireAllNow.getState() || fireCNow.getState() || beatFireC) {
     if (!fireC.getState()) {
       fireC.on();
     }
@@ -466,7 +525,7 @@ void loop() {
       fireC.off();
     }
   }
-  if (fireAllNow.getState() || fireDNow.getState() || beatSaysFire) {
+  if (fireAllNow.getState() || fireDNow.getState() || beatFireD) {
     if (!fireD.getState()) {
       fireD.on();
     }
@@ -501,7 +560,7 @@ void loop() {
   counter ++;
   static Metro updateInterval(1000UL);
   if ( updateInterval.check() ) {
-    //Serial << F("Updates per second: ") << counter << endl;
+    Serial << F("Updates per second: ") << counter << endl;
     if ( counter < updateFloor ) Serial << F("CAUTION: loop() < updateFloor!!") << endl;
     counter = 0;
     updateInterval.reset();
@@ -566,6 +625,15 @@ boolean timeForFire( byte clock, byte start, byte stop ) {
   if( clock >= stop && clock < start ) return( false );
   else return( true );
   
+}
+
+// Given the bpm and duration, will this small of a ticksPerTrigger result
+// in more triggers than the poofers can handle.
+boolean tooFastForPoofers(byte ticksPerTrigger) {
+  int millisPerBeat = MILLIS_PER_MINUTE / bpm;
+  int millisPerTick = millisPerBeat / CLOCK_TICKS_PER_BEAT;
+  int durationMillis = millisPerTick * duration;
+  return millisPerTick * ticksPerTrigger < durationMillis + 200UL;
 }
 
 // brighten or dim an LED based on a state
