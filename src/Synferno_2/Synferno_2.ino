@@ -12,7 +12,7 @@
 // Arduino Mega
 // A2 to OLED `CS`
 // A8 to Rotary Encoder `A`
-// A9 to Rotary Encoder `B`
+// A10 to Rotary Encoder `B`
 // 2 to Pushbutton Fire 0 `LED`
 // 3 to Pushbutton Fire 1 `LED`
 // 4 to Pushbutton Fire 3 `LED`
@@ -23,7 +23,7 @@
 // 9 to Pushbutton Freq 2 `LED`
 // 10 to Pushbutton Freq 3 `LED`
 // 11 to Pushbutton Freq 4 `LED`
-// 12 to Pushbutton Fire 2 `LED`
+// 12 NOT USED ~to Pushbutton Fire 2 `LED`~
 // 13 to Pushbutton Tap `LED`
 // 16 to MIDI `rx`
 // 17 to MIDI `tx`
@@ -63,14 +63,14 @@
 // CS to Mega A2
 // DC to Mega 22
 // RES to Mega 23
-// SCLK to Mega 21
 // SDA to Mega 20
+// SCLK to Mega 21
 // VDD to Buck Converter `+5`
 // VSS to GND
 
 // Click Encoder
 // A to Mega A8
-// B to Mega A9
+// B to Mega A10
 // Btn to Mega 24
 // + to Buck Converter `+5`
 // GND to GND
@@ -98,7 +98,7 @@
 // Midi breakout
 // tx to Mega 16 (`RX2`)
 // rx to Mega 17 (`TX2`)
-// + to Buck Converter `+5`
+// + LEAVE DISCONNECTED
 // - to GND
 
 // Required libraries
@@ -126,10 +126,10 @@ Solenoid fireA, fireB, fireC, fireD;
 
 // Push buttons
 #include "Button.h"
-#define BRIGHTNESS_BRIGHT_RED 255
+#define BRIGHTNESS_BRIGHT_RED 230
 #define BRIGHTNESS_DIM_RED 20
-#define BRIGHTNESS_BRIGHT_BLUE 180
-#define BRIGHTNESS_DIM_BLUE 15
+#define BRIGHTNESS_BRIGHT_YELLOW 255
+#define BRIGHTNESS_DIM_YELLOW 30
 #define BTN_FIRE_0_PIN 34
 #define BTN_FIRE_1_PIN 35
 #define BTN_FIRE_2_PIN 36
@@ -181,9 +181,9 @@ U8X8_SSD1309_128X64_NONAME0_4W_SW_SPI u8x8(SCL, SDA, OLED_CS, OLED_DC, OLED_RST)
 #define MODE_MIDI 0
 #define MODE_MANUAL 1
 boolean hasConfigChange = false;
-int duration=2;
+int duration=2; // Number of clock ticks per beat to fire
 float bpm=120.0;
-int offset=0;
+int offset=0; // Number of clock ticks early to trigger the next beat
 int mode=MODE_MIDI;
 
 TOGGLE(mode,modeMenu,"Mode     ",doNothing,noEvent,noStyle
@@ -210,6 +210,9 @@ result selectManual() {
   // Enable manual BPM setting
   mainMenu[2].enabled=enabledStatus;
   manualBeat.resetCounter();
+  if (bpm == 0.0) {
+    bpm = 120.0;
+  }
   return configUpdate();
 }
 
@@ -241,9 +244,9 @@ NAVROOT(nav,mainMenu,MAX_DEPTH,encStream,out);
 
 // Local variables
 byte clocksPerTrigger = CLOCK_TICKS_PER_BEAT;
+boolean beatSaysFire = false;
 float suspendedAtBPM;
-bool beatSaysFire = false;
-bool suspendBeatReactions = false;
+boolean suspendBeatReactions = false;
 
 void setup() {
   Serial.begin(115200);
@@ -294,11 +297,11 @@ void setup() {
   pinMode(LED_FIRE_4_PIN, OUTPUT);
   // reset midi counter to zero
   zero.begin(BTN_ZERO_PIN);
-  analogWrite(LED_ZERO_PIN, BRIGHTNESS_DIM_BLUE);
+  analogWrite(LED_ZERO_PIN, BRIGHTNESS_DIM_YELLOW);
   pinMode(LED_ZERO_PIN, OUTPUT);
   // tap bpm
   tap.begin(BTN_TAP_PIN);
-  analogWrite(LED_TAP_PIN, BRIGHTNESS_DIM_BLUE);
+  analogWrite(LED_TAP_PIN, BRIGHTNESS_DIM_YELLOW);
   pinMode(LED_TAP_PIN, OUTPUT);
   manualBeat.setBPM(bpm);
   // fire per beat frequency
@@ -393,7 +396,7 @@ void loop() {
   static Metro holdToSuspend(1700UL);
   // If the zero button is momentarily pressed, reset the clock counters. This marks the beginning of a stanza.
   if (zero.update()) {
-    togglePWMLED(zero.getState(), LED_ZERO_PIN, BRIGHTNESS_BRIGHT_BLUE, BRIGHTNESS_DIM_BLUE);
+    togglePWMLED(zero.getState(), LED_ZERO_PIN, BRIGHTNESS_BRIGHT_YELLOW, BRIGHTNESS_DIM_YELLOW);
     if (zero.getState()) {
       holdToSuspend.reset();
       suspendBeatReactions = false;
@@ -411,7 +414,7 @@ void loop() {
       // ensure beat does not trigger fire
       beatSaysFire = false;
       // turn off the Zero button's LED
-      togglePWMLED(false, LED_ZERO_PIN, BRIGHTNESS_BRIGHT_BLUE, BRIGHTNESS_DIM_BLUE);
+      togglePWMLED(false, LED_ZERO_PIN, BRIGHTNESS_BRIGHT_YELLOW, BRIGHTNESS_DIM_YELLOW);
     }
   }
 
@@ -498,7 +501,7 @@ void loop() {
   counter ++;
   static Metro updateInterval(1000UL);
   if ( updateInterval.check() ) {
-    Serial << F("Updates per second: ") << counter << endl;
+    //Serial << F("Updates per second: ") << counter << endl;
     if ( counter < updateFloor ) Serial << F("CAUTION: loop() < updateFloor!!") << endl;
     counter = 0;
     updateInterval.reset();
@@ -516,7 +519,7 @@ boolean updateClockCounter() {
   }
 }
 
-// determine firing time and updatedisplay beat information
+// determine firing time and display beat information.
 void handleBeat() {
     byte counter = getClockCounter();
 
@@ -535,16 +538,16 @@ void handleBeat() {
     // and when do we need to turn it off?
     byte fireOffAt = (fireOnAt + duration) % clocksPerTrigger;
 
-    // given the current counter and on/off times, should we shoot fire or not?
-    beatSaysFire = frequency.hasSelection() && timeForFire( counter % clocksPerTrigger, fireOnAt, fireOffAt );
-
-    // report tick, noting we do this after the hardware-level update
+    // report beat
     showBeat(counter % CLOCK_TICKS_PER_BEAT);
 
     // report stanza beginning
     if (!zero.getState()){
       showStanza(counter);
     }
+    
+    // given the current counter and on/off times, should we shoot fire or not?
+    beatSaysFire = frequency.hasSelection() && timeForFire( counter % clocksPerTrigger, fireOnAt, fireOffAt );
 }
 
 // helper function to work through the modulo-24 stuff.  PITA.
@@ -579,10 +582,10 @@ void showBeat(byte count) {
   if ( lastCount != count ) {
     lastCount = count;
     if ( count == 0 ) {
-      analogWrite(LED_TAP_PIN, BRIGHTNESS_BRIGHT_BLUE);
+      analogWrite(LED_TAP_PIN, BRIGHTNESS_BRIGHT_YELLOW);
     }
     if ( count == 2 ) {
-      analogWrite(LED_TAP_PIN, BRIGHTNESS_DIM_BLUE);
+      analogWrite(LED_TAP_PIN, BRIGHTNESS_DIM_YELLOW);
     }
   }
 }
@@ -592,10 +595,10 @@ void showStanza(byte count) {
   if ( lastCount != count ) {
     lastCount = count;
     if ( count == 0 ) {
-      analogWrite(LED_ZERO_PIN, BRIGHTNESS_BRIGHT_BLUE);
+      analogWrite(LED_ZERO_PIN, BRIGHTNESS_BRIGHT_YELLOW);
     }
     if ( count == 2 ) {
-      analogWrite(LED_ZERO_PIN, BRIGHTNESS_DIM_BLUE);
+      analogWrite(LED_ZERO_PIN, BRIGHTNESS_DIM_YELLOW);
     }
   }
 }

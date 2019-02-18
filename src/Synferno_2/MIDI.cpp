@@ -73,7 +73,7 @@ void MIDI::processTick() {
 }
 
 float MIDI::getBPM() {
-  return( this->bpm );
+  return( clockCounter == 255 ? 0 : this->bpm );
 }
 
 // qsort requires you to create a sort function
