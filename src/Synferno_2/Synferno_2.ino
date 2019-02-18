@@ -432,59 +432,6 @@ void loop() {
   // if we have a clock tick, update the firing status and beat indicators.
   if( updateClockCounter() ) {
     handleBeat();
-
-    // when beat changes state to firing, update which poofers should be triggered
-    if (beatSaysFire != lastBeatSaysFire) {
-      lastBeatSaysFire = beatSaysFire;
-      if (beatSaysFire) {
-
-        // beatSaysFire has just changed to true, so cycle which poofers are active.
-        if (!tooFastForPoofers(clocksPerTrigger)) {
-          // fire 1 group
-          beatFireA = true;
-          beatFireB = true;
-          beatFireC = true;
-          beatFireD = true;
-        } else if (!tooFastForPoofers(clocksPerTrigger*2)) {
-          // fire 2 groups
-          firingGroup = (firingGroup + 1) % 2;
-          switch(firingGroup) {
-            case 0:
-              beatFireA = true;
-              beatFireD = true;
-              break;
-            case 1:
-              beatFireB = true;
-              beatFireC = true;
-              break;
-          }
-        } else {
-          // fire 4 groups
-          firingGroup = (firingGroup + 1) % 4;
-          switch(firingGroup) {
-            case 0:
-              beatFireC = true;
-              break;
-            case 1:
-              beatFireA = true;
-              break;
-            case 2:
-              beatFireB = true;
-              break;
-            case 3:
-              beatFireD = true;
-              break;
-          }
-        }
-
-      }
-    }
-  }
-  if (!beatSaysFire) {
-    beatFireA = false;
-    beatFireB = false;
-    beatFireC = false;
-    beatFireD = false;
   }
 
   // 6. handle poofers
@@ -580,33 +527,67 @@ boolean updateClockCounter() {
 
 // determine firing time and display beat information.
 void handleBeat() {
-    byte counter = getClockCounter();
+  byte counter = getClockCounter();
 
-    // ensure beat reactions are enabled
-    if (suspendBeatReactions) {
-      // when the BPM changes, resume operation
-      if (suspendedAtBPM == bpm) {
-        return;
-      }
-      suspendBeatReactions = false;
+  // ensure beat reactions are enabled
+  if (suspendBeatReactions) {
+    // when the BPM changes, resume operation
+    if (suspendedAtBPM == bpm) {
+      return;
     }
+    suspendBeatReactions = false;
+  }
 
-    // how far back from the poof do we need to trigger the hardware?
-    byte fireOnAt = (clocksPerTrigger - offset) % clocksPerTrigger;
-    
-    // and when do we need to turn it off?
-    byte fireOffAt = (fireOnAt + duration) % clocksPerTrigger;
+  // report beat
+  showBeat(counter % CLOCK_TICKS_PER_BEAT);
 
-    // report beat
-    showBeat(counter % CLOCK_TICKS_PER_BEAT);
+  // report stanza beginning
+  if (!zero.getState()){
+    showStanza(counter);
+  }
+  
+  // how far back from the beat do we need to trigger each poofer?
+  byte fireAOnAt;
+  byte fireBOnAt;
+  byte fireCOnAt;
+  byte fireDOnAt;
+  byte modifiedClocksPerTrigger = clocksPerTrigger;
+  // if the triggers are coming too often, spread them out
+  if (!tooFastForPoofers(clocksPerTrigger)) {
+    // 1 group
+    fireAOnAt = (clocksPerTrigger - offset) % clocksPerTrigger;
+    fireBOnAt = (clocksPerTrigger - offset) % clocksPerTrigger;
+    fireCOnAt = (clocksPerTrigger - offset) % clocksPerTrigger;
+    fireDOnAt = (clocksPerTrigger - offset) % clocksPerTrigger;
+  } else if (!tooFastForPoofers(clocksPerTrigger*2)) {
+    // 2 groups; double the ticks-per-trigger window and offset half of the poofers by 1/2 ticks
+    modifiedClocksPerTrigger = clocksPerTrigger * 2;
 
-    // report stanza beginning
-    if (!zero.getState()){
-      showStanza(counter);
-    }
-    
-    // given the current counter and on/off times, should we shoot fire or not?
-    beatSaysFire = frequency.hasSelection() && timeForFire( counter % clocksPerTrigger, fireOnAt, fireOffAt );
+    fireAOnAt = (modifiedClocksPerTrigger - offset + clocksPerTrigger) % modifiedClocksPerTrigger;
+    fireBOnAt = (modifiedClocksPerTrigger - offset) % modifiedClocksPerTrigger;
+    fireCOnAt = (modifiedClocksPerTrigger - offset) % modifiedClocksPerTrigger;
+    fireDOnAt = (modifiedClocksPerTrigger - offset + clocksPerTrigger) % modifiedClocksPerTrigger;
+  } else {
+    // 4 groups; quadruple the ticks-per-trigger window and offset each of the poofers by 1/4 ticks
+    modifiedClocksPerTrigger = clocksPerTrigger * 4;
+
+    fireAOnAt = (modifiedClocksPerTrigger - offset + clocksPerTrigger) % modifiedClocksPerTrigger;
+    fireBOnAt = (modifiedClocksPerTrigger - offset + (3 * clocksPerTrigger)) % modifiedClocksPerTrigger;
+    fireCOnAt = (modifiedClocksPerTrigger - offset) % modifiedClocksPerTrigger;
+    fireDOnAt = (modifiedClocksPerTrigger - offset + (2 * clocksPerTrigger)) % modifiedClocksPerTrigger;
+  }
+  
+  // and when do we need to turn them off?
+  byte fireAOffAt = (fireAOnAt + duration) % modifiedClocksPerTrigger;
+  byte fireBOffAt = (fireBOnAt + duration) % modifiedClocksPerTrigger;
+  byte fireCOffAt = (fireCOnAt + duration) % modifiedClocksPerTrigger;
+  byte fireDOffAt = (fireDOnAt + duration) % modifiedClocksPerTrigger;
+  
+  // given the current counter and on/off times, should we shoot fire or not?
+  beatFireA = frequency.hasSelection() && timeForFire( counter % modifiedClocksPerTrigger, fireAOnAt, fireAOffAt );
+  beatFireB = frequency.hasSelection() && timeForFire( counter % modifiedClocksPerTrigger, fireBOnAt, fireBOffAt );
+  beatFireC = frequency.hasSelection() && timeForFire( counter % modifiedClocksPerTrigger, fireCOnAt, fireCOffAt );
+  beatFireD = frequency.hasSelection() && timeForFire( counter % modifiedClocksPerTrigger, fireDOnAt, fireDOffAt );
 }
 
 // helper function to work through the modulo-24 stuff.  PITA.
