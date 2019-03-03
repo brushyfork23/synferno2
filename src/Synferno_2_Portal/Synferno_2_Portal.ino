@@ -26,6 +26,9 @@
 
 ESP8266WebServer server(80);
 
+String inString = "";    // string to hold Serial input
+char inCommand;
+
 int duration=2;
 float bpm=120.0;
 int offset=0;
@@ -135,10 +138,14 @@ void handleConfig() {
   server.sendHeader("Location", "/");
   server.send(301);
 
-  Serial.print(offset);
-  Serial.print(duration);
-  Serial.print(bpm);
-  Serial.print(mode);
+  Serial.print("O");
+  Serial.println(offset);
+  Serial.print("D");
+  Serial.println(duration);
+  Serial.print("B");
+  Serial.println(bpm);
+  Serial.print("M");
+  Serial.println(mode);
 }
 
 void handleNotFound() {
@@ -161,7 +168,11 @@ void setup() {
   while(!Serial);
 
   // establish contact with the Mega
-  establishContact();
+  if (!(connected = establishContact())) {
+    // connection failed; do nothing
+    while(true);
+  }
+  inString = "";
 
    // configure soft access point
   WiFi.softAPConfig(IPAddress(LOCAL_IP), IPAddress(GATEWAY), IPAddress(SUBNET));
@@ -189,18 +200,43 @@ void loop() {
   server.handleClient();
 
   // Handle serial requests
-  // Expect 4 values: offset, duration, bpm, mode
-  if (Serial.available() > 0) {
-    offset = Serial.read();
-    duration = Serial.read();
-    bpm = Serial.read();
-    mode = Serial.read();
+  while (Serial.available() > 0) {
+    int inChar = Serial.read();
+    if (isDigit(inChar)) {
+      inString += (char)inChar;
+    }
+    if (inChar != '\n') {
+      inCommand = (char)inChar;
+    }
+
+    if (inChar == '\n') {
+      switch (inCommand) {
+        case "O":
+          offset = inString.toInt();
+          break;
+        case "D":
+          duration = inString.toInt();
+          break;
+        case "B":
+          bpm = inString.toInt();
+          break;
+        case "M":
+          mode = inString.toInt();
+          break;
+      }
+      inString = "";
+      inCommand = '\0';
+    }
   }
 }
 
-void establishContact() {
+bool establishContact() {
   while (Serial.available() <= 0) {
-    Serial.println("OK?");
+    Serial.print("OK?");
     delay(300);
   }
+  while (Serial.available()) {
+    inString += Serial.read();
+  }
+  return inString == "ACK";
 }

@@ -23,8 +23,7 @@
 // 9 to Pushbutton Freq 2 `LED`
 // 10 to Pushbutton Freq 3 `LED`
 // 11 to Pushbutton Freq 4 `LED`
-// 12 NOT USED ~to Pushbutton Fire 2 `LED`~
-// 13 to Pushbutton Tap `LED`
+// 12 to Pushbutton Tap `LED`
 // 16 to MIDI `rx`
 // 17 to MIDI `tx`
 // 18 to ESP8266 `RX`
@@ -98,7 +97,7 @@
 // Midi breakout
 // tx to Mega 16 (`RX2`)
 // rx to Mega 17 (`TX2`)
-// + LEAVE DISCONNECTED
+// + to Buck Converter `+5`
 // - to GND
 
 // Required libraries
@@ -139,11 +138,10 @@ Solenoid fireA, fireB, fireC, fireD;
 #define BTN_TAP_PIN 40
 #define LED_FIRE_0_PIN 2
 #define LED_FIRE_1_PIN 3
-#define LED_FIRE_2_PIN 12
 #define LED_FIRE_3_PIN 4
 #define LED_FIRE_4_PIN 5
 #define LED_ZERO_PIN 6
-#define LED_TAP_PIN 13
+#define LED_TAP_PIN 12
 Button fireAllNow;
 Button fireANow;
 Button fireBNow;
@@ -287,8 +285,6 @@ void setup() {
   // buttons
   // make fire now
   fireAllNow.begin(BTN_FIRE_2_PIN);
-  analogWrite(LED_FIRE_2_PIN, BRIGHTNESS_DIM_RED);
-  pinMode(LED_FIRE_2_PIN, OUTPUT);
   fireANow.begin(BTN_FIRE_0_PIN);
   analogWrite(LED_FIRE_0_PIN, BRIGHTNESS_DIM_RED);
   pinMode(LED_FIRE_0_PIN, OUTPUT);
@@ -316,26 +312,7 @@ void setup() {
   // web portal
   // listen for boot character sequence
   Serial.println("Establishing connection with web server");
-  Serial1.begin(115200);
-  while(!Serial1);
-  Serial.println("skipping.  implement web server later");
-//   Serial.print("Connecting ...");
-//   while (Serial1.available() <= 0) {
-//     Serial.print(".");
-//     delay(300);
-//   }
-//   String inString = "";
-//   inString.reserve(10);
-//   while (Serial1.available()) {
-//     inString += Serial1.read();
-//   }
-//   Serial.print(inString);
-//   Serial.println(" Success!");
-//   // Send initial values
-//   Serial1.print(offset);
-//   Serial1.print(duration);
-//   Serial1.print(bpm);
-//   Serial1.print(mode);
+  webserverInit();
 }
 
 void loop() {
@@ -355,22 +332,21 @@ void loop() {
   // send updates
   if (hasConfigChange) {
     hasConfigChange = false;
-    // Serial1.print(offset);
-    // Serial1.print(duration);
-    // Serial1.print(bpm);
-    // Serial1.print(mode);
+    Serial1.print("O");
+    Serial1.println(offset);
+    Serial1.print("D");
+    Serial1.println(duration);
+    Serial1.print("B");
+    Serial1.println(bpm);
+    Serial1.print("M");
+    Serial1.println(mode);
   }
   // fetch updates
-  // while (Serial1.available()) {
-  //   offset = Serial1.read();
-  //   duration = Serial1.read();
-  //   bpm = Serial1.read();
-  //   mode = Serial1.read();
-  // }
+  handleWebserverUpdates();
   
   // 2. handle tap button
   if (mode == MODE_MANUAL) {
-    if (tap.update() && !tap.getState()) {
+    if (tap.update() && tap.getState()) {
       handleTap();
     }
   }
@@ -539,13 +515,13 @@ void handleBeat() {
   }
 
   // report beat
-  showBeat(counter % CLOCK_TICKS_PER_BEAT);
+  showBeat((counter + offset) % CLOCK_TICKS_PER_BEAT);
 
   // report stanza beginning
   if (!zero.getState()){
-    showStanza(counter);
+    showStanza(counter + offset);
   }
-  
+
   // how far back from the beat do we need to trigger each poofer?
   byte fireAOnAt;
   byte fireBOnAt;
@@ -695,5 +671,80 @@ byte getClockCounter() {
     return midi.getCounter();
   } else {
     return manualBeat.getCounter();
+  }
+}
+
+// Establish a two-way connection with the ESP8266 webserver module and
+// send initial values.
+bool webserverInit() {
+  Serial1.begin(115200);
+  while(!Serial1);
+  Serial.print("Connecting ...");
+  Metro connectionTimoeout(1500UL);
+  while (Serial1.available() <= 0) {
+    if (connectionTimoeout.check()) {
+      // connection timed out
+      Serial.println(" FAILED");
+      return false;
+    }
+    Serial.print(".");
+    delay(300);
+  }
+  // receiving bytes
+  String inString = "";
+  inString.reserve(4);
+  while (Serial1.available()) {
+    inString += Serial1.read();
+  }
+  Serial.print(inString);
+  if (inString != "OK?") {
+    // received wrong bytes
+    Serial.print("received unexpected: ");
+    Serial.println(inString);
+    return false;
+  }
+  // acknowledge
+  Serial.println("received OK request.  Sending ACK");
+  Serial1.print("ACK");
+
+  // Send initial values
+  Serial1.print("O");
+  Serial1.println(offset);
+  Serial1.print("D");
+  Serial1.println(duration);
+  Serial1.print("B");
+  Serial1.println(bpm);
+  Serial1.print("M");
+  Serial1.println(mode);
+}
+
+void handleWebserverUpdates() {
+  while (Serial.available() > 0) {
+    int inChar = Serial.read();
+    if (isDigit(inChar)) {
+      inString += (char)inChar;
+    }
+    if (inChar != '\n') {
+      inCommand = (char)inChar;
+    }
+
+    if (inChar == '\n') {
+      switch (inCommand) {
+        case "O":
+          offset = inString.toInt();
+          break;
+        case "D":
+          duration = inString.toInt();
+          break;
+        case "B":
+          bpm = inString.toInt();
+          break;
+        case "M":
+          mode = inString.toInt();
+          break;
+      }
+      inString = "";
+      inCommand = '\0';
+    }
   }
 }
