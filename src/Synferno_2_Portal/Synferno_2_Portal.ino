@@ -26,11 +26,11 @@
 
 ESP8266WebServer server(80);
 
-String inString = "";    // string to hold Serial input
+long inNum = 0;    // int to hold Serial input
 char inCommand;
 
 int duration=2;
-float bpm=120.0;
+int bpm=120;
 int offset=0;
 int mode=0;
 
@@ -135,17 +135,22 @@ void handleConfig() {
   if (server.hasArg("MODE")) {
     mode = server.arg("MODE").toInt();
   }
+
+  Serial.print('O');
+  Serial.print(offset);
+  Serial.print('\n');
+  Serial.print('D');
+  Serial.print(duration);
+  Serial.print('\n');
+  Serial.print('B');
+  Serial.print(bpm);
+  Serial.print('\n');
+  Serial.print('M');
+  Serial.print(mode);
+  Serial.print('\n');
+
   server.sendHeader("Location", "/");
   server.send(301);
-
-  Serial.print("O");
-  Serial.println(offset);
-  Serial.print("D");
-  Serial.println(duration);
-  Serial.print("B");
-  Serial.println(bpm);
-  Serial.print("M");
-  Serial.println(mode);
 }
 
 void handleNotFound() {
@@ -166,13 +171,6 @@ void handleNotFound() {
 void setup() {
   Serial.begin(115200);
   while(!Serial);
-
-  // establish contact with the Mega
-  if (!(connected = establishContact())) {
-    // connection failed; do nothing
-    while(true);
-  }
-  inString = "";
 
    // configure soft access point
   WiFi.softAPConfig(IPAddress(LOCAL_IP), IPAddress(GATEWAY), IPAddress(SUBNET));
@@ -203,40 +201,28 @@ void loop() {
   while (Serial.available() > 0) {
     int inChar = Serial.read();
     if (isDigit(inChar)) {
-      inString += (char)inChar;
-    }
-    if (inChar != '\n') {
+      inNum = inNum * 10 + inChar;
+    } else if ((char)inChar != '\n') {
       inCommand = (char)inChar;
     }
 
-    if (inChar == '\n') {
+    if ((char)inChar == '\n') {
       switch (inCommand) {
-        case "O":
-          offset = inString.toInt();
+        case 'O':
+          offset = inNum;
           break;
-        case "D":
-          duration = inString.toInt();
+        case 'D':
+          duration = inNum;
           break;
-        case "B":
-          bpm = inString.toInt();
+        case 'B':
+          bpm = inNum;
           break;
-        case "M":
-          mode = inString.toInt();
+        case 'M':
+          mode = inNum;
           break;
       }
-      inString = "";
+      inNum = 0;
       inCommand = '\0';
     }
   }
-}
-
-bool establishContact() {
-  while (Serial.available() <= 0) {
-    Serial.print("OK?");
-    delay(300);
-  }
-  while (Serial.available()) {
-    inString += Serial.read();
-  }
-  return inString == "ACK";
 }

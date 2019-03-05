@@ -241,6 +241,8 @@ NAVROOT(nav,mainMenu,MAX_DEPTH,encStream,out);
 
 
 // Local variables
+long inNum = 0;
+char inCommand;
 byte clocksPerTrigger = CLOCK_TICKS_PER_BEAT;
 boolean beatSaysFire = false;
 boolean lastBeatSaysFire = false;
@@ -255,6 +257,9 @@ boolean suspendBeatReactions = false;
 void setup() {
   Serial.begin(115200);
   while(!Serial);
+
+  Serial1.begin(115200);
+  while(!Serial1);
 
   // fire up the Screen
   SPI.begin();
@@ -308,11 +313,6 @@ void setup() {
   manualBeat.setBPM(bpm);
   // fire per beat frequency
   frequency.begin(NUM_FREQUENCY_BUTTONS, FREQUENCY_BUTTON_PINS, FREQUENCY_LED_PINS);
-
-  // web portal
-  // listen for boot character sequence
-  Serial.println("Establishing connection with web server");
-  webserverInit();
 }
 
 void loop() {
@@ -332,13 +332,13 @@ void loop() {
   // send updates
   if (hasConfigChange) {
     hasConfigChange = false;
-    Serial1.print("O");
+    Serial1.print('O');
     Serial1.println(offset);
-    Serial1.print("D");
+    Serial1.print('D');
     Serial1.println(duration);
-    Serial1.print("B");
+    Serial1.print('B');
     Serial1.println(bpm);
-    Serial1.print("M");
+    Serial1.print('M');
     Serial1.println(mode);
   }
   // fetch updates
@@ -483,7 +483,7 @@ void loop() {
   counter ++;
   static Metro updateInterval(1000UL);
   if ( updateInterval.check() ) {
-    Serial << F("Updates per second: ") << counter << endl;
+    //Serial << F("Updates per second: ") << counter << endl;
     if ( counter < updateFloor ) Serial << F("CAUTION: loop() < updateFloor!!") << endl;
     counter = 0;
     updateInterval.reset();
@@ -674,76 +674,40 @@ byte getClockCounter() {
   }
 }
 
-// Establish a two-way connection with the ESP8266 webserver module and
-// send initial values.
-bool webserverInit() {
-  Serial1.begin(115200);
-  while(!Serial1);
-  Serial.print("Connecting ...");
-  Metro connectionTimoeout(1500UL);
-  while (Serial1.available() <= 0) {
-    if (connectionTimoeout.check()) {
-      // connection timed out
-      Serial.println(" FAILED");
-      return false;
-    }
-    Serial.print(".");
-    delay(300);
-  }
-  // receiving bytes
-  String inString = "";
-  inString.reserve(4);
-  while (Serial1.available()) {
-    inString += Serial1.read();
-  }
-  Serial.print(inString);
-  if (inString != "OK?") {
-    // received wrong bytes
-    Serial.print("received unexpected: ");
-    Serial.println(inString);
-    return false;
-  }
-  // acknowledge
-  Serial.println("received OK request.  Sending ACK");
-  Serial1.print("ACK");
-
-  // Send initial values
-  Serial1.print("O");
-  Serial1.println(offset);
-  Serial1.print("D");
-  Serial1.println(duration);
-  Serial1.print("B");
-  Serial1.println(bpm);
-  Serial1.print("M");
-  Serial1.println(mode);
-}
-
 void handleWebserverUpdates() {
-  while (Serial.available() > 0) {
-    int inChar = Serial.read();
-    if (isDigit(inChar)) {
-      inString += (char)inChar;
-    }
-    if (inChar != '\n') {
+  while (Serial1.available() > 0) {
+    int inChar = Serial1.read();
+    Serial << (char)inChar;
+     if (isDigit(inChar)) {
+      inNum = inNum * 10 + (inChar - '0');
+    } else if ((char)inChar != '\n') {
       inCommand = (char)inChar;
     }
 
-    if (inChar == '\n') {
+    if ((char)inChar == '\n') {
       switch (inCommand) {
-        case "O":
-          offset = inString.toInt();
+        case 'O':
+          offset = inNum;
+          Serial << F("offset: ") << inNum << endl;
           break;
-        case "D":
-          duration = inString.toInt();
+        case 'D':
+          duration = inNum;
+          Serial << F("duration: ") << inNum << endl;
           break;
-        case "B":
-          bpm = inString.toInt();
+        case 'B':
+          bpm = inNum;
+          Serial << F("bpm: ") << inNum << endl;
           break;
-        case "M":
-          mode = inString.toInt();
+        case 'M':
+          mode = inNum;
+          Serial << F("mode: ") << inNum << endl;
+          break;
+        default:
+          Serial << F("inCommand: ") << inCommand << F("_") << (int)inCommand << endl;
           break;
       }
-      inString = "";
+      Serial << F("clearing inNum") << endl;
+      inNum = 0;
       inCommand = '\0';
     }
   }
