@@ -178,22 +178,89 @@ U8X8_SSD1309_128X64_NONAME0_4W_SW_SPI u8x8(SCL, SDA, OLED_CS, OLED_DC, OLED_RST)
 
 #define MODE_MIDI 0
 #define MODE_MANUAL 1
+#define BTN_MODE_1_4 0
+#define BTN_MODE_1_2 1
+#define BTN_MODE_1 2
+#define BTN_MODE_2 3
+#define BTN_MODE_4 4
+#define BTN_MODE_JUNGLE 5
+#define BTN_MODE_BREAK 6
 boolean hasConfigChange = false;
 int duration=2; // Number of clock ticks per beat to fire
 float bpm=120.0;
 int offset=0; // Number of clock ticks early to trigger the next beat
 int mode=MODE_MIDI;
+int btnAMode = BTN_MODE_4;
+int btnBMode = BTN_MODE_2;
+int btnCMode = BTN_MODE_1;
+int btnDMode = BTN_MODE_1_2;
+int btnEMode = BTN_MODE_1_4;
 
 TOGGLE(mode,modeMenu,"Mode     ",doNothing,noEvent,noStyle
-  ,VALUE("Midi",MODE_MIDI,selectMidi,exitEvent)
-  ,VALUE("Manual",MODE_MANUAL,selectManual,exitEvent)
+  ,VALUE("Midi",MODE_MIDI,selectMidi,noEvent)
+  ,VALUE("Manual",MODE_MANUAL,selectManual,noEvent)
+);
+
+SELECT(btnAMode,bntAModeMenu,"Rhythm A",doNothing,noEvent,noStyle
+  ,VALUE("4",BTN_MODE_4,configUpdate,noEvent)
+  ,VALUE("2",BTN_MODE_2,configUpdate,noEvent)
+  ,VALUE("1",BTN_MODE_1,configUpdate,noEvent)
+  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
+  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
+  ,VALUE("Jungle",BTN_MODE_JUNGLE,configUpdate,noEvent)
+  ,VALUE("Breaks",BTN_MODE_BREAK,configUpdate,noEvent)
+);
+
+SELECT(btnBMode,bntBModeMenu,"Rhythm B",doNothing,noEvent,noStyle
+  ,VALUE("4",BTN_MODE_4,configUpdate,noEvent)
+  ,VALUE("2",BTN_MODE_2,configUpdate,noEvent)
+  ,VALUE("1",BTN_MODE_1,configUpdate,noEvent)
+  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
+  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
+  ,VALUE("Jungle",BTN_MODE_JUNGLE,configUpdate,noEvent)
+  ,VALUE("Breaks",BTN_MODE_BREAK,configUpdate,noEvent)
+);
+
+SELECT(btnCMode,bntCModeMenu,"Rhythm C",doNothing,noEvent,noStyle
+  ,VALUE("4",BTN_MODE_4,configUpdate,noEvent)
+  ,VALUE("2",BTN_MODE_2,configUpdate,noEvent)
+  ,VALUE("1",BTN_MODE_1,configUpdate,noEvent)
+  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
+  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
+  ,VALUE("Jungle",BTN_MODE_JUNGLE,configUpdate,noEvent)
+  ,VALUE("Breaks",BTN_MODE_BREAK,configUpdate,noEvent)
+);
+
+SELECT(btnDMode,bntDModeMenu,"Rhythm D",doNothing,noEvent,noStyle
+  ,VALUE("4",BTN_MODE_4,configUpdate,noEvent)
+  ,VALUE("2",BTN_MODE_2,configUpdate,noEvent)
+  ,VALUE("1",BTN_MODE_1,configUpdate,noEvent)
+  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
+  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
+  ,VALUE("Jungle",BTN_MODE_JUNGLE,configUpdate,noEvent)
+  ,VALUE("Breaks",BTN_MODE_BREAK,configUpdate,noEvent)
+);
+
+SELECT(btnEMode,bntEModeMenu,"Rhythm E",doNothing,noEvent,noStyle
+  ,VALUE("4",BTN_MODE_4,configUpdate,noEvent)
+  ,VALUE("2",BTN_MODE_2,configUpdate,noEvent)
+  ,VALUE("1",BTN_MODE_1,configUpdate,noEvent)
+  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
+  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
+  ,VALUE("Jungle",BTN_MODE_JUNGLE,configUpdate,noEvent)
+  ,VALUE("Breaks",BTN_MODE_BREAK,configUpdate,noEvent)
 );
 
 MENU(mainMenu,"   SYNFERNO",doNothing,noEvent,noStyle
-  ,FIELD(duration,"Duration","",1,23,1,0,configUpdate,exitEvent,noStyle)
-  ,FIELD(offset,"Offset  ","",0,23,1,0,configUpdate,exitEvent,noStyle)
-  ,FIELD(bpm,"BPM     ","",0.0,300.0,1.0,0.1,editBPM,exitEvent,noStyle)
+  ,FIELD(duration,"Duration","",1,23,1,0,configUpdate,noEvent,noStyle)
+  ,FIELD(offset,"Offset  ","",0,23,1,0,configUpdate,noEvent,wrapStyle)
+  ,FIELD(bpm,"BPM     ","",0.0,300.0,1.0,0.1,editBPM,noEvent,noStyle)
   ,SUBMENU(modeMenu)
+  ,SUBMENU(bntAModeMenu)
+  ,SUBMENU(bntBModeMenu)
+  ,SUBMENU(bntCModeMenu)
+  ,SUBMENU(bntDModeMenu)
+  ,SUBMENU(bntEModeMenu)
 );
 
 #define MAX_DEPTH 2
@@ -243,7 +310,7 @@ NAVROOT(nav,mainMenu,MAX_DEPTH,encStream,out);
 // Local variables
 long inNum = 0;
 char inCommand;
-byte clocksPerTrigger = CLOCK_TICKS_PER_BEAT;
+int btnMode;
 boolean beatSaysFire = false;
 boolean lastBeatSaysFire = false;
 boolean beatFireA = false;
@@ -355,23 +422,21 @@ void loop() {
   if ( frequency.update() && frequency.hasSelection() ) {
     switch (frequency.getValue()) {
       case 0:
-        clocksPerTrigger = 96;
+        btnMode = btnAMode;
         break;
       case 1:
-        clocksPerTrigger = 48;
+        btnMode = btnBMode;
         break;
       case 2:
-        clocksPerTrigger = 24;
+        btnMode = btnCMode;
         break;
       case 3:
-        clocksPerTrigger = 12;
+        btnMode = btnDMode;
         break;
       case 4:
-        clocksPerTrigger = 6;
+        btnMode = btnEMode;
         break;
     }
-    // const int frequencyMultiplier = CLOCK_TICKS_PER_BEAT / FREQUENCY_SCALE;
-    // clocksPerTrigger = (NUM_FREQUENCY_BUTTONS - frequency.getValue()) * frequencyMultiplier;
   }
   
   // 4. handle zero button
@@ -523,6 +588,40 @@ void handleBeat() {
   }
 
   // how far back from the beat do we need to trigger each poofer?
+  if (!frequency.hasSelection()) {
+    beatFireA = false;
+    beatFireB = false;
+    beatFireC = false;
+    beatFireD = false;
+  } else {
+    switch (btnMode) {
+      case BTN_MODE_4:
+        setFireStates4_4(counter, CLOCK_TICKS_PER_BEAT * 4);
+        break;
+      case BTN_MODE_2:
+        setFireStates4_4(counter, CLOCK_TICKS_PER_BEAT * 2);
+        break;
+      case BTN_MODE_1:
+        setFireStates4_4(counter, CLOCK_TICKS_PER_BEAT);
+        break;
+      case BTN_MODE_1_2:
+        setFireStates4_4(counter, CLOCK_TICKS_PER_BEAT / 2);
+        break;
+      case BTN_MODE_1_4:
+        setFireStates4_4(counter, CLOCK_TICKS_PER_BEAT / 4);
+        break;
+      case BTN_MODE_JUNGLE:
+        setFireStatesJungle(counter);
+        break;
+      case BTN_MODE_BREAK:
+        setFireStatesBreaks(counter);
+        break;
+    }
+  }
+}
+
+// Set each fire state based on a 4/4 beat
+void setFireStates4_4(byte counter, int clocksPerTrigger) {
   byte fireAOnAt;
   byte fireBOnAt;
   byte fireCOnAt;
@@ -560,11 +659,47 @@ void handleBeat() {
   byte fireDOffAt = (fireDOnAt + duration) % modifiedClocksPerTrigger;
   
   // given the current counter and on/off times, should we shoot fire or not?
-  beatFireA = frequency.hasSelection() && timeForFire( counter % modifiedClocksPerTrigger, fireAOnAt, fireAOffAt );
-  beatFireB = frequency.hasSelection() && timeForFire( counter % modifiedClocksPerTrigger, fireBOnAt, fireBOffAt );
-  beatFireC = frequency.hasSelection() && timeForFire( counter % modifiedClocksPerTrigger, fireCOnAt, fireCOffAt );
-  beatFireD = frequency.hasSelection() && timeForFire( counter % modifiedClocksPerTrigger, fireDOnAt, fireDOffAt );
+  beatFireA = timeForFire( counter % modifiedClocksPerTrigger, fireAOnAt, fireAOffAt );
+  beatFireB = timeForFire( counter % modifiedClocksPerTrigger, fireBOnAt, fireBOffAt );
+  beatFireC = timeForFire( counter % modifiedClocksPerTrigger, fireCOnAt, fireCOffAt );
+  beatFireD = timeForFire( counter % modifiedClocksPerTrigger, fireDOnAt, fireDOffAt );
 }
+
+void setFireStatesJungle(byte counter) {
+  beatFireA = false;
+  beatFireB = false;
+  beatFireC = false;
+  beatFireD = false;
+  // byte fireAOnAt;
+  // byte fireBOnAt;
+  // byte fireCOnAt;
+  // byte fireDOnAt;
+
+  // byte mod = CLOCK_TICKS_PER_BEAT - offset % CLOCK_TICKS_PER_BEAT;
+  // counter = counter % CLOCK_TICKS_PER_BEAT;
+
+  // switch (counter) {
+  //   case 0 + mod:
+  //     fireAOnAt = counter;
+  //     break;
+  // }
+
+  // fireAOnAt = 0 + mod;
+  // byte fireAOffAt = (fireAOnAt + duration) % CLOCK_TICKS_PER_BEAT;
+  // beatFireA = timeForFire( counter, fireAOnAt, fireAOffAt );
+  
+  // fireBOnAt = 4 + mod;
+  // byte fireBOffAt = (fireAOnAt + duration) % CLOCK_TICKS_PER_BEAT;
+  // beatFireB = timeForFire( counter, fireBOnAt, fireBOffAt );
+}
+
+void setFireStatesBreaks(byte counter) {
+  beatFireA = false;
+  beatFireB = false;
+  beatFireC = false;
+  beatFireD = false;
+}
+
 
 // helper function to work through the modulo-24 stuff.  PITA.
 boolean timeForFire( byte clock, byte start, byte stop ) {
