@@ -49,6 +49,7 @@
 // 38 to Pushbutton Fire 4 `signal`
 // 39 to Pushbutton Zero `signal`
 // 40 to Pushbutton Tap `signal`
+// 46 to Big Red Button (other side of big red button to GND)
 // VCC to Buck Converter `+5`
 // GND to GND
 
@@ -136,6 +137,7 @@ Solenoid fireA, fireB, fireC, fireD;
 #define BTN_FIRE_4_PIN 38
 #define BTN_ZERO_PIN 39
 #define BTN_TAP_PIN 40
+#define BTN_BIG_RED_BUTTON_PIN 46
 #define LED_FIRE_0_PIN 2
 #define LED_FIRE_1_PIN 3
 #define LED_FIRE_3_PIN 4
@@ -149,6 +151,7 @@ Button fireCNow;
 Button fireDNow;
 Button zero;
 Button tap;
+Button bigRedButton;
 
 // Frequency buttons
 #include "ButtonGroup.h"
@@ -167,8 +170,8 @@ ButtonGroup frequency;
 #include <menuIO/keyIn.h>
 #include <SPI.h>
 using namespace Menu;
-#define ENC_A    A8
-#define ENC_B    A10
+#define ENC_CLK    A8
+#define ENC_DT    A10
 #define ENC_BTN  24
 #define OLED_CS A2
 #define OLED_DC 22
@@ -292,9 +295,10 @@ result configUpdate() {
 }
 
 
-#include <menuIO/clickEncoderIn.h>
-ClickEncoder clickEncoder(ENC_A,ENC_B,ENC_BTN,2);
-ClickEncoderStream encStream(clickEncoder,2);
+//#include <menuIO/clickEncoderIn.h>
+#include "clickEncoderIn.h"
+ClickEncoder clickEncoder(ENC_CLK, ENC_DT, ENC_BTN, LOW);
+ClickEncoderStream encStream(clickEncoder,1);
 
 MENU_OUTPUTS(out,MAX_DEPTH
   ,U8X8_OUT(u8x8,{0,0,16,8})
@@ -356,6 +360,7 @@ void setup() {
 
   // buttons
   // make fire now
+  bigRedButton.begin(BTN_BIG_RED_BUTTON_PIN);
   fireAllNow.begin(BTN_FIRE_2_PIN);
   fireANow.begin(BTN_FIRE_0_PIN);
   analogWrite(LED_FIRE_0_PIN, BRIGHTNESS_DIM_RED);
@@ -478,6 +483,7 @@ void loop() {
   // 6. handle poofers
   // Turn the poofers on or off, depending on beat and buttons.
   // update the state of the fire-now buttons
+  bigRedButton.update();
   fireAllNow.update();
   fireANow.update();
   fireBNow.update();
@@ -486,7 +492,7 @@ void loop() {
   // if any of the relevant states of buttons or clicks indicate that
   // it's time to fire, ensure the poofer is lit.  Otherwise, ensure
   // that it is extinguished.
-  if (fireAllNow.getState() || fireANow.getState() || beatFireA) {
+  if (bigRedButton.getState() || fireAllNow.getState() || fireANow.getState() || beatFireA) {
     if (!fireA.getState()) {
       fireA.on();
     }
@@ -495,7 +501,7 @@ void loop() {
       fireA.off();
     }
   }
-  if (fireAllNow.getState() || fireBNow.getState() || beatFireB) {
+  if (bigRedButton.getState() || fireAllNow.getState() || fireBNow.getState() || beatFireB) {
     if (!fireB.getState()) {
       fireB.on();
     }
@@ -504,7 +510,7 @@ void loop() {
       fireB.off();
     }
   }
-  if (fireAllNow.getState() || fireCNow.getState() || beatFireC) {
+  if (bigRedButton.getState() || fireAllNow.getState() || fireCNow.getState() || beatFireC) {
     if (!fireC.getState()) {
       fireC.on();
     }
@@ -513,7 +519,7 @@ void loop() {
       fireC.off();
     }
   }
-  if (fireAllNow.getState() || fireDNow.getState() || beatFireD) {
+  if (bigRedButton.getState() || fireAllNow.getState() || fireDNow.getState() || beatFireD) {
     if (!fireD.getState()) {
       fireD.on();
     }
