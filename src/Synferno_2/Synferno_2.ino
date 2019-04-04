@@ -186,8 +186,9 @@ U8X8_SSD1309_128X64_NONAME0_4W_SW_SPI u8x8(SCL, SDA, OLED_CS, OLED_DC, OLED_RST)
 #define BTN_MODE_1 2
 #define BTN_MODE_2 3
 #define BTN_MODE_4 4
-#define BTN_MODE_JUNGLE 5
-#define BTN_MODE_BREAK 6
+#define BTN_MODE_DNB 5
+#define BTN_MODE_JUNGLE 6
+#define BTN_MODE_BREAK 7
 boolean hasConfigChange = false;
 int duration=2; // Number of clock ticks per beat to fire
 float bpm=120.0;
@@ -210,6 +211,7 @@ SELECT(btnAMode,bntAModeMenu,"Rhythm A",doNothing,noEvent,noStyle
   ,VALUE("1",BTN_MODE_1,configUpdate,noEvent)
   ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
   ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
+  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,noEvent)
   ,VALUE("Jungle",BTN_MODE_JUNGLE,configUpdate,noEvent)
   ,VALUE("Breaks",BTN_MODE_BREAK,configUpdate,noEvent)
 );
@@ -220,6 +222,7 @@ SELECT(btnBMode,bntBModeMenu,"Rhythm B",doNothing,noEvent,noStyle
   ,VALUE("1",BTN_MODE_1,configUpdate,noEvent)
   ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
   ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
+  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,noEvent)
   ,VALUE("Jungle",BTN_MODE_JUNGLE,configUpdate,noEvent)
   ,VALUE("Breaks",BTN_MODE_BREAK,configUpdate,noEvent)
 );
@@ -230,6 +233,7 @@ SELECT(btnCMode,bntCModeMenu,"Rhythm C",doNothing,noEvent,noStyle
   ,VALUE("1",BTN_MODE_1,configUpdate,noEvent)
   ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
   ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
+  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,noEvent)
   ,VALUE("Jungle",BTN_MODE_JUNGLE,configUpdate,noEvent)
   ,VALUE("Breaks",BTN_MODE_BREAK,configUpdate,noEvent)
 );
@@ -240,6 +244,7 @@ SELECT(btnDMode,bntDModeMenu,"Rhythm D",doNothing,noEvent,noStyle
   ,VALUE("1",BTN_MODE_1,configUpdate,noEvent)
   ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
   ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
+  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,noEvent)
   ,VALUE("Jungle",BTN_MODE_JUNGLE,configUpdate,noEvent)
   ,VALUE("Breaks",BTN_MODE_BREAK,configUpdate,noEvent)
 );
@@ -250,6 +255,7 @@ SELECT(btnEMode,bntEModeMenu,"Rhythm E",doNothing,noEvent,noStyle
   ,VALUE("1",BTN_MODE_1,configUpdate,noEvent)
   ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
   ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
+  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,noEvent)
   ,VALUE("Jungle",BTN_MODE_JUNGLE,configUpdate,noEvent)
   ,VALUE("Breaks",BTN_MODE_BREAK,configUpdate,noEvent)
 );
@@ -446,7 +452,7 @@ void loop() {
   
   // 4. handle zero button
   static Metro holdToSuspend(1700UL);
-  // If the zero button is momentarily pressed, reset the clock counters. This marks the beginning of a stanza.
+  // If the zero button is momentarily pressed, reset the clock counters. This marks the beginning of a bar.
   if (zero.update()) {
     togglePWMLED(zero.getState(), LED_ZERO_PIN, BRIGHTNESS_BRIGHT_YELLOW, BRIGHTNESS_DIM_YELLOW);
     if (zero.getState()) {
@@ -588,9 +594,9 @@ void handleBeat() {
   // report beat
   showBeat((counter + offset) % CLOCK_TICKS_PER_BEAT);
 
-  // report stanza beginning
+  // report bar beginning
   if (!zero.getState()){
-    showStanza(counter + offset);
+    showBar( (counter + offset) % (CLOCK_TICKS_PER_BEAT * SCALE));
   }
 
   // how far back from the beat do we need to trigger each poofer?
@@ -615,6 +621,9 @@ void handleBeat() {
         break;
       case BTN_MODE_1_4:
         setFireStates4_4(counter, CLOCK_TICKS_PER_BEAT / 4);
+        break;
+      case BTN_MODE_DNB:
+        setFireStatesDnb(counter);
         break;
       case BTN_MODE_JUNGLE:
         setFireStatesJungle(counter);
@@ -669,6 +678,72 @@ void setFireStates4_4(byte counter, int clocksPerTrigger) {
   beatFireB = timeForFire( counter % modifiedClocksPerTrigger, fireBOnAt, fireBOffAt );
   beatFireC = timeForFire( counter % modifiedClocksPerTrigger, fireCOnAt, fireCOffAt );
   beatFireD = timeForFire( counter % modifiedClocksPerTrigger, fireDOnAt, fireDOffAt );
+}
+
+void setFireStatesDnb(byte counter) {
+  beatFireA = false;
+  beatFireB = false;
+  beatFireC = false;
+  beatFireD = false;
+
+  switch (counter) {
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+    case 6:
+    case 7:
+    case 8:
+    case 9:
+    case 10:
+    case 11:
+    case 12:
+    case 13:
+    case 14:
+    case 15:
+    case 16:
+    case 17:
+    case 18:
+    case 19:
+      beatFireB = true;
+      beatFireC = true;
+      break;
+    case 23:
+    case 24:
+    case 25:
+    case 26:
+    case 27:
+    case 28:
+    case 29:
+    case 30:
+      beatFireA = true;
+      beatFireD = true;
+      break;
+    case 61:
+    case 62:
+    case 63:
+    case 64:
+    case 65:
+    case 66:
+    case 67:
+    case 68:
+      beatFireB = true;
+      beatFireC = true;
+      break;
+    case 77:
+    case 78:
+    case 79:
+    case 80:
+    case 81:
+    case 82:
+    case 83:
+    case 84:
+      beatFireA = true;
+      beatFireD = true;
+      break;
+  }
 }
 
 void setFireStatesJungle(byte counter) {
@@ -756,7 +831,7 @@ void showBeat(byte count) {
   }
 }
 
-void showStanza(byte count) {
+void showBar(byte count) {
   static byte lastCount = 255;
   if ( lastCount != count ) {
     lastCount = count;
