@@ -8,6 +8,10 @@ and send booleans to Processing.
 #define PIN_C 9
 #define PIN_D 10
 
+#include <Metro.h> // Include the Metro library
+
+Metro serialMetro = Metro(1000 / 60);  // Instantiate an instance
+
 void setup() {
   //start serial connection
   Serial.begin(9600);
@@ -20,11 +24,13 @@ void setup() {
 }
 
 void loop() {
-  readAndPrint(PIN_A);
-  readAndPrint(PIN_B);
-  readAndPrint(PIN_C);
-  readAndPrint(PIN_D);
-  Serial.println();
+  if (serialMetro.check()) {
+    readAndPrint(PIN_A);
+    readAndPrint(PIN_B);
+    readAndPrint(PIN_C);
+    readAndPrint(PIN_D);
+    Serial.println();
+  }
 }
 
 void readAndPrint(int pin) {
