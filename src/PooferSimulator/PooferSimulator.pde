@@ -1,7 +1,5 @@
 /**
- * Read a string from an Arduino serial line which describes the state
- * of each of the 4 poofer channels as a 0 or 1.
- * Illuminate a bar for each of the channels when they are lit, simulating a Poof.
+ * Simulate a poof for each of the 4 channels read over an Arduino serial line.
  */
 
 
@@ -13,6 +11,7 @@ int lf = 10;    // Linefeed in ASCII
 String inString = null;      // Data received from the serial port
 boolean[] states = new boolean[4];
 SoundFile[] poofSounds = new SoundFile[4];
+Poof[] poofs = new Poof[4];
 
 void setup() 
 {
@@ -32,6 +31,11 @@ void setup()
   poofSounds[1] = new SoundFile(this, "poofer.wav");
   poofSounds[2] = new SoundFile(this, "poofer.wav");
   poofSounds[3] = new SoundFile(this, "poofer.wav");
+  
+  poofs[0] = new Poof(0);
+  poofs[1] = new Poof(1);
+  poofs[2] = new Poof(2);
+  poofs[3] = new Poof(3);
 }
 
 void draw()
@@ -41,8 +45,8 @@ void draw()
     
     if (inString != null && inString.length() == 6) {      
       // assume inString is a valid 4 character string of '0's and/or '1's
-      background(255);             // Set background to white
-      
+      background(0);             // Set background to black
+      fill(color(255,50,50));    // set objects to red
       tickPoofer(inString.charAt(0) == '1', 0);
       tickPoofer(inString.charAt(1) == '1', 1);
       tickPoofer(inString.charAt(2) == '1', 2);
@@ -58,13 +62,17 @@ void tickPoofer(boolean firing, int x) {
   boolean changed = (states[x] != firing);
   states[x] = firing;
   
-  // lowest possible effort: fill a red bar
-  if (firing) {
-    fill(color(255,50,50));
-  } else {
-    fill(0);
+  // spawn and fill an oval while firing.  Shrink and rise an oval when released
+  if (changed) {
+    if (firing) {
+      poofs[x] = new Poof(x);
+      poofs[x].setGrowing(true);
+    } else {
+      poofs[x].setGrowing(false);
+    }
   }
-  rect(x * width / 4, 0, width/4, height);
+  poofs[x].animate();
+    
   
   // start a poof sound, or play the poofer ending if poofer state changed
   if (changed) {
