@@ -6,11 +6,13 @@
 
 
 import processing.serial.*;
+import processing.sound.*;
 
 Serial inPort;  // Create object from Serial class
 int lf = 10;    // Linefeed in ASCII
 String inString = null;      // Data received from the serial port
-char[] timestamp = new char[20];
+boolean[] states = new boolean[4];
+SoundFile[] poofSounds = new SoundFile[4];
 
 void setup() 
 {
@@ -25,6 +27,11 @@ void setup()
   // in the middle of a string from the sender.
   inString = inPort.readStringUntil(lf);
   inString = null;
+  
+  poofSounds[0] = new SoundFile(this, "poofer.wav");
+  poofSounds[1] = new SoundFile(this, "poofer.wav");
+  poofSounds[2] = new SoundFile(this, "poofer.wav");
+  poofSounds[3] = new SoundFile(this, "poofer.wav");
 }
 
 void draw()
@@ -35,21 +42,37 @@ void draw()
     if (inString != null && inString.length() == 6) {      
       // assume inString is a valid 4 character string of '0's and/or '1's
       background(255);             // Set background to white
-      drawPoofer(inString.charAt(0) == '1', 0);
-      drawPoofer(inString.charAt(1) == '1', 1);
-      drawPoofer(inString.charAt(2) == '1', 2);
-      drawPoofer(inString.charAt(3) == '1', 3);
+      
+      tickPoofer(inString.charAt(0) == '1', 0);
+      tickPoofer(inString.charAt(1) == '1', 1);
+      tickPoofer(inString.charAt(2) == '1', 2);
+      tickPoofer(inString.charAt(3) == '1', 3);
       inPort.clear();
     }
   }
 }
 
 
-void drawPoofer(boolean firing, int x) {
+void tickPoofer(boolean firing, int x) {
+  // update state
+  boolean changed = (states[x] != firing);
+  states[x] = firing;
+  
+  // lowest possible effort: fill a red bar
   if (firing) {
     fill(color(255,50,50));
   } else {
     fill(0);
   }
   rect(x * width / 4, 0, width/4, height);
+  
+  // start a poof sound, or play the poofer ending if poofer state changed
+  if (changed) {
+    if (firing) {
+      poofSounds[x].cue(0);
+      poofSounds[x].play();
+    } else {
+      poofSounds[x].jump(3.8);
+    }
+  }
 }
