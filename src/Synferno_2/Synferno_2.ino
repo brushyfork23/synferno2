@@ -11,8 +11,8 @@
 
 // Arduino Mega
 // A2 to OLED `CS`
-// A8 to Rotary Encoder `A`
-// A10 to Rotary Encoder `B`
+// A8 to Rotary Encoder `CLK`
+// A10 to Rotary Encoder `DT`
 // 2 to Pushbutton Fire 0 `LED`
 // 3 to Pushbutton Fire 1 `LED`
 // 4 to Pushbutton Fire 3 `LED`
@@ -32,7 +32,7 @@
 // 21 to OLED `SCLK`
 // 22 to OLED `DC`
 // 23 to OLED `RES`
-// 24 to Rotary Encoder `Btn`
+// 24 to Rotary Encoder `SW`
 // 25 to MOSFET Driver Module 0 `SIG`
 // 26 to MOSFET Driver Module 1 `SIG`
 // 27 to MOSFET Driver Module 2 `SIG`
@@ -69,9 +69,9 @@
 // VSS to GND
 
 // Click Encoder
-// A to Mega A8
-// B to Mega A10
-// Btn to Mega 24
+// CLK to Mega A8
+// DT to Mega A10
+// SW to Mega 24
 // + to Buck Converter `+5`
 // GND to GND
 
@@ -96,8 +96,8 @@
 // GND to GND
 
 // Midi breakout
-// tx to Mega 16 (`RX2`)
-// rx to Mega 17 (`TX2`)
+// tx to Mega 17 (`RX2`)
+// rx to Mega 16 (`TX2`)
 // + to Buck Converter `+5`
 // - to GND
 
@@ -187,8 +187,6 @@ U8X8_SSD1309_128X64_NONAME0_4W_SW_SPI u8x8(SCL, SDA, OLED_CS, OLED_DC, OLED_RST)
 #define BTN_MODE_2 3
 #define BTN_MODE_4 4
 #define BTN_MODE_DNB 5
-#define BTN_MODE_JUNGLE 6
-#define BTN_MODE_BREAK 7
 boolean hasConfigChange = false;
 int duration=2; // Number of clock ticks per beat to fire
 float bpm=120.0;
@@ -212,8 +210,6 @@ SELECT(btnAMode,bntAModeMenu,"Rhythm A",doNothing,noEvent,noStyle
   ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
   ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
   ,VALUE("DNB",BTN_MODE_DNB,configUpdate,noEvent)
-  ,VALUE("Jungle",BTN_MODE_JUNGLE,configUpdate,noEvent)
-  ,VALUE("Breaks",BTN_MODE_BREAK,configUpdate,noEvent)
 );
 
 SELECT(btnBMode,bntBModeMenu,"Rhythm B",doNothing,noEvent,noStyle
@@ -223,8 +219,6 @@ SELECT(btnBMode,bntBModeMenu,"Rhythm B",doNothing,noEvent,noStyle
   ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
   ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
   ,VALUE("DNB",BTN_MODE_DNB,configUpdate,noEvent)
-  ,VALUE("Jungle",BTN_MODE_JUNGLE,configUpdate,noEvent)
-  ,VALUE("Breaks",BTN_MODE_BREAK,configUpdate,noEvent)
 );
 
 SELECT(btnCMode,bntCModeMenu,"Rhythm C",doNothing,noEvent,noStyle
@@ -234,8 +228,6 @@ SELECT(btnCMode,bntCModeMenu,"Rhythm C",doNothing,noEvent,noStyle
   ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
   ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
   ,VALUE("DNB",BTN_MODE_DNB,configUpdate,noEvent)
-  ,VALUE("Jungle",BTN_MODE_JUNGLE,configUpdate,noEvent)
-  ,VALUE("Breaks",BTN_MODE_BREAK,configUpdate,noEvent)
 );
 
 SELECT(btnDMode,bntDModeMenu,"Rhythm D",doNothing,noEvent,noStyle
@@ -245,8 +237,6 @@ SELECT(btnDMode,bntDModeMenu,"Rhythm D",doNothing,noEvent,noStyle
   ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
   ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
   ,VALUE("DNB",BTN_MODE_DNB,configUpdate,noEvent)
-  ,VALUE("Jungle",BTN_MODE_JUNGLE,configUpdate,noEvent)
-  ,VALUE("Breaks",BTN_MODE_BREAK,configUpdate,noEvent)
 );
 
 SELECT(btnEMode,bntEModeMenu,"Rhythm E",doNothing,noEvent,noStyle
@@ -256,8 +246,6 @@ SELECT(btnEMode,bntEModeMenu,"Rhythm E",doNothing,noEvent,noStyle
   ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
   ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
   ,VALUE("DNB",BTN_MODE_DNB,configUpdate,noEvent)
-  ,VALUE("Jungle",BTN_MODE_JUNGLE,configUpdate,noEvent)
-  ,VALUE("Breaks",BTN_MODE_BREAK,configUpdate,noEvent)
 );
 
 MENU(mainMenu,"   SYNFERNO",doNothing,noEvent,noStyle
@@ -328,8 +316,6 @@ boolean beatFireB = false;
 boolean beatFireC = false;
 boolean beatFireD = false;
 byte firingGroup = 0;
-float suspendedAtBPM;
-boolean suspendBeatReactions = false;
 
 void setup() {
   Serial.begin(115200);
@@ -451,28 +437,11 @@ void loop() {
   }
   
   // 4. handle zero button
-  static Metro holdToSuspend(1700UL);
   // If the zero button is momentarily pressed, reset the clock counters. This marks the beginning of a bar.
   if (zero.update()) {
     togglePWMLED(zero.getState(), LED_ZERO_PIN, BRIGHTNESS_BRIGHT_YELLOW, BRIGHTNESS_DIM_YELLOW);
     if (zero.getState()) {
-      holdToSuspend.reset();
-      suspendBeatReactions = false;
       resetClockCounter();
-    }
-  }
-  // If the zero button is held, suspend beat reactions until a new BPM is detected
-  // or the zero button is pressed again.
-  if (zero.getState()) {
-    if (holdToSuspend.check()) {
-      // record the current BPM
-      suspendedAtBPM = bpm;
-      // set flag to suspend beat reactions
-      suspendBeatReactions = true;
-      // ensure beat does not trigger fire
-      beatSaysFire = false;
-      // turn off the Zero button's LED
-      togglePWMLED(false, LED_ZERO_PIN, BRIGHTNESS_BRIGHT_YELLOW, BRIGHTNESS_DIM_YELLOW);
     }
   }
 
@@ -582,15 +551,6 @@ boolean updateClockCounter() {
 void handleBeat() {
   byte counter = getClockCounter();
 
-  // ensure beat reactions are enabled
-  if (suspendBeatReactions) {
-    // when the BPM changes, resume operation
-    if (suspendedAtBPM == bpm) {
-      return;
-    }
-    suspendBeatReactions = false;
-  }
-
   // report beat
   showBeat((counter + offset) % CLOCK_TICKS_PER_BEAT);
 
@@ -624,12 +584,6 @@ void handleBeat() {
         break;
       case BTN_MODE_DNB:
         setFireStatesDnb(counter);
-        break;
-      case BTN_MODE_JUNGLE:
-        setFireStatesJungle(counter);
-        break;
-      case BTN_MODE_BREAK:
-        setFireStatesBreaks(counter);
         break;
     }
   }
@@ -745,42 +699,6 @@ void setFireStatesDnb(byte counter) {
       break;
   }
 }
-
-void setFireStatesJungle(byte counter) {
-  beatFireA = false;
-  beatFireB = false;
-  beatFireC = false;
-  beatFireD = false;
-  // byte fireAOnAt;
-  // byte fireBOnAt;
-  // byte fireCOnAt;
-  // byte fireDOnAt;
-
-  // byte mod = CLOCK_TICKS_PER_BEAT - offset % CLOCK_TICKS_PER_BEAT;
-  // counter = counter % CLOCK_TICKS_PER_BEAT;
-
-  // switch (counter) {
-  //   case 0 + mod:
-  //     fireAOnAt = counter;
-  //     break;
-  // }
-
-  // fireAOnAt = 0 + mod;
-  // byte fireAOffAt = (fireAOnAt + duration) % CLOCK_TICKS_PER_BEAT;
-  // beatFireA = timeForFire( counter, fireAOnAt, fireAOffAt );
-  
-  // fireBOnAt = 4 + mod;
-  // byte fireBOffAt = (fireAOnAt + duration) % CLOCK_TICKS_PER_BEAT;
-  // beatFireB = timeForFire( counter, fireBOnAt, fireBOffAt );
-}
-
-void setFireStatesBreaks(byte counter) {
-  beatFireA = false;
-  beatFireB = false;
-  beatFireC = false;
-  beatFireD = false;
-}
-
 
 // helper function to work through the modulo-24 stuff.  PITA.
 boolean timeForFire( byte clock, byte start, byte stop ) {
