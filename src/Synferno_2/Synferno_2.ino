@@ -24,8 +24,8 @@
 // 10 to Pushbutton Freq 3 `LED`
 // 11 to Pushbutton Freq 4 `LED`
 // 12 to Pushbutton Tap `LED`
-// 16 to MIDI `rx`
-// 17 to MIDI `tx`
+// 16 to MIDI `tx`
+// 17 to MIDI `rx`
 // 18 to ESP8266 `RX`
 // 19 to ESP8266 `TX`
 // 20 to OLED `SDA`
@@ -96,8 +96,8 @@
 // GND to GND
 
 // Midi breakout
-// tx to Mega 17 (`RX2`)
-// rx to Mega 16 (`TX2`)
+// tx to Mega 16 (`RX2`)
+// rx to Mega 17 (`TX2`)
 // + to Buck Converter `+5`
 // - to GND
 
@@ -105,7 +105,7 @@
 // ArduinoStreaming: https://github.com/geneReeves/ArduinoStreaming
 // Metro: https://github.com/thomasfredericks/Metro-Arduino-Wiring
 // Bounce2: https://github.com/thomasfredericks/Bounce2
-// ArduinoMenu: https://github.com/neu-rah/ArduinoMenu
+// ArduinoMenu_library: https://github.com/neu-rah/ArduinoMenu
 // > encoder: https://github.com/christophepersoz/encoder
 // U8g2: https://github.com/olikraus/U8g2_Arduino
 
@@ -153,14 +153,13 @@ Button zero;
 Button tap;
 Button bigRedButton;
 
-// Frequency buttons
+// Sequence buttons
 #include "ButtonGroup.h"
-#define NUM_FREQUENCY_BUTTONS 5
-#define FREQUENCY_SCALE 4
-byte FREQUENCY_BUTTON_PINS[NUM_FREQUENCY_BUTTONS] = {29, 30, 31, 32, 33};
-byte FREQUENCY_LED_PINS[NUM_FREQUENCY_BUTTONS] = {7, 8, 9, 10, 11};
-ButtonGroup frequency;
-
+#define NUM_SEQUENCE_BUTTONS 5
+#define SEQUENCE_SCALE 4
+byte SEQUENCE_BUTTON_PINS[NUM_SEQUENCE_BUTTONS] = {29, 30, 31, 32, 33};
+byte SEQUENCE_LED_PINS[NUM_SEQUENCE_BUTTONS] = {7, 8, 9, 10, 11};
+ButtonGroup sequence;
 
 /*
  * Begin Menu
@@ -187,8 +186,11 @@ U8X8_SSD1309_128X64_NONAME0_4W_SW_SPI u8x8(SCL, SDA, OLED_CS, OLED_DC, OLED_RST)
 #define BTN_MODE_2 3
 #define BTN_MODE_4 4
 #define BTN_MODE_DNB 5
+#define BTN_MODE_RACE100L 6
+#define BTN_MODE_RACE050L 7
+#define BTN_MODE_TO_AND_FRO_050L 8
 boolean hasConfigChange = false;
-int duration=2; // Number of clock ticks per beat to fire
+int duration=7; // Number of clock ticks per beat to fire
 float bpm=120.0;
 int offset=0; // Number of clock ticks early to trigger the next beat
 int mode=MODE_MIDI;
@@ -198,60 +200,71 @@ int btnCMode = BTN_MODE_1;
 int btnDMode = BTN_MODE_1_2;
 int btnEMode = BTN_MODE_1_4;
 
-TOGGLE(mode,modeMenu,"Mode     ",doNothing,noEvent,noStyle
-  ,VALUE("Midi",MODE_MIDI,selectMidi,noEvent)
-  ,VALUE("Manual",MODE_MANUAL,selectManual,noEvent)
+result selectMidi();
+result selectManual();
+result configUpdate() {
+  hasConfigChange = true;
+  return proceed;
+}
+result editBPM() {
+  manualBeat.setBPM(bpm);
+  return configUpdate();
+}
+
+TOGGLE(mode,modeMenu,"Mode     ",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE("Midi",MODE_MIDI,selectMidi,Menu::noEvent)
+  ,VALUE("Manual",MODE_MANUAL,selectManual,Menu::noEvent)
 );
 
-SELECT(btnAMode,bntAModeMenu,"Rhythm A",doNothing,noEvent,noStyle
-  ,VALUE("4",BTN_MODE_4,configUpdate,noEvent)
-  ,VALUE("2",BTN_MODE_2,configUpdate,noEvent)
-  ,VALUE("1",BTN_MODE_1,configUpdate,noEvent)
-  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
-  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
-  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,noEvent)
+SELECT(btnAMode,bntAModeMenu,"Seq A   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE("4",BTN_MODE_4,configUpdate,Menu::noEvent)
+  ,VALUE("2",BTN_MODE_2,configUpdate,Menu::noEvent)
+  ,VALUE("1",BTN_MODE_1,configUpdate,Menu::noEvent)
+  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,Menu::noEvent)
+  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,Menu::noEvent)
+  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,Menu::noEvent)
 );
 
-SELECT(btnBMode,bntBModeMenu,"Rhythm B",doNothing,noEvent,noStyle
-  ,VALUE("4",BTN_MODE_4,configUpdate,noEvent)
-  ,VALUE("2",BTN_MODE_2,configUpdate,noEvent)
-  ,VALUE("1",BTN_MODE_1,configUpdate,noEvent)
-  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
-  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
-  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,noEvent)
+SELECT(btnBMode,bntBModeMenu,"Seq B   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE("4",BTN_MODE_4,configUpdate,Menu::noEvent)
+  ,VALUE("2",BTN_MODE_2,configUpdate,Menu::noEvent)
+  ,VALUE("1",BTN_MODE_1,configUpdate,Menu::noEvent)
+  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,Menu::noEvent)
+  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,Menu::noEvent)
+  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,Menu::noEvent)
 );
 
-SELECT(btnCMode,bntCModeMenu,"Rhythm C",doNothing,noEvent,noStyle
-  ,VALUE("4",BTN_MODE_4,configUpdate,noEvent)
-  ,VALUE("2",BTN_MODE_2,configUpdate,noEvent)
-  ,VALUE("1",BTN_MODE_1,configUpdate,noEvent)
-  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
-  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
-  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,noEvent)
+SELECT(btnCMode,bntCModeMenu,"Seq C   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE("4",BTN_MODE_4,configUpdate,Menu::noEvent)
+  ,VALUE("2",BTN_MODE_2,configUpdate,Menu::noEvent)
+  ,VALUE("1",BTN_MODE_1,configUpdate,Menu::noEvent)
+  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,Menu::noEvent)
+  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,Menu::noEvent)
+  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,Menu::noEvent)
 );
 
-SELECT(btnDMode,bntDModeMenu,"Rhythm D",doNothing,noEvent,noStyle
-  ,VALUE("4",BTN_MODE_4,configUpdate,noEvent)
-  ,VALUE("2",BTN_MODE_2,configUpdate,noEvent)
-  ,VALUE("1",BTN_MODE_1,configUpdate,noEvent)
-  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
-  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
-  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,noEvent)
+SELECT(btnDMode,bntDModeMenu,"Seq D   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE("4",BTN_MODE_4,configUpdate,Menu::noEvent)
+  ,VALUE("2",BTN_MODE_2,configUpdate,Menu::noEvent)
+  ,VALUE("1",BTN_MODE_1,configUpdate,Menu::noEvent)
+  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,Menu::noEvent)
+  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,Menu::noEvent)
+  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,Menu::noEvent)
 );
 
-SELECT(btnEMode,bntEModeMenu,"Rhythm E",doNothing,noEvent,noStyle
-  ,VALUE("4",BTN_MODE_4,configUpdate,noEvent)
-  ,VALUE("2",BTN_MODE_2,configUpdate,noEvent)
-  ,VALUE("1",BTN_MODE_1,configUpdate,noEvent)
-  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,noEvent)
-  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,noEvent)
-  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,noEvent)
+SELECT(btnEMode,bntEModeMenu,"Seq E   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE("4",BTN_MODE_4,configUpdate,Menu::noEvent)
+  ,VALUE("2",BTN_MODE_2,configUpdate,Menu::noEvent)
+  ,VALUE("1",BTN_MODE_1,configUpdate,Menu::noEvent)
+  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,Menu::noEvent)
+  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,Menu::noEvent)
+  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,Menu::noEvent)
 );
 
-MENU(mainMenu,"   SYNFERNO",doNothing,noEvent,noStyle
-  ,FIELD(duration,"Duration","",1,23,1,0,configUpdate,noEvent,noStyle)
-  ,FIELD(offset,"Offset  ","",0,23,1,0,configUpdate,noEvent,wrapStyle)
-  ,FIELD(bpm,"BPM     ","",0.0,300.0,1.0,0.1,editBPM,noEvent,noStyle)
+MENU(mainMenu,"   SYNFERNO",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,FIELD(duration,"Duration","",1,23,1,0,configUpdate,Menu::exitEvent,Menu::noStyle)
+  ,FIELD(offset,"Offset  ","",0,23,1,0,configUpdate,Menu::exitEvent,Menu::wrapStyle)
+  ,FIELD(bpm,"BPM     ","",0.0,300.0,1.0,0.1,editBPM,Menu::exitEvent,Menu::noStyle)
   ,SUBMENU(modeMenu)
   ,SUBMENU(bntAModeMenu)
   ,SUBMENU(bntBModeMenu)
@@ -277,17 +290,6 @@ result selectManual() {
   }
   return configUpdate();
 }
-
-result editBPM() {
-  manualBeat.setBPM(bpm);
-  return configUpdate();
-}
-
-result configUpdate() {
-  hasConfigChange = true;
-  return proceed;
-}
-
 
 //#include <menuIO/clickEncoderIn.h>
 #include "clickEncoderIn.h"
@@ -315,7 +317,6 @@ boolean beatFireA = false;
 boolean beatFireB = false;
 boolean beatFireC = false;
 boolean beatFireD = false;
-byte firingGroup = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -375,8 +376,8 @@ void setup() {
   analogWrite(LED_TAP_PIN, BRIGHTNESS_DIM_YELLOW);
   pinMode(LED_TAP_PIN, OUTPUT);
   manualBeat.setBPM(bpm);
-  // fire per beat frequency
-  frequency.begin(NUM_FREQUENCY_BUTTONS, FREQUENCY_BUTTON_PINS, FREQUENCY_LED_PINS);
+  // sequences of poofs
+  sequence.begin(NUM_SEQUENCE_BUTTONS, SEQUENCE_BUTTON_PINS, SEQUENCE_LED_PINS);
 }
 
 void loop() {
@@ -386,11 +387,11 @@ void loop() {
     clickEncoder.service();
     encoderUpdate.reset();
   }
-   static Metro navInterval(1UL);
-   if (navInterval.check()) {
-     navInterval.reset();
+  static Metro navInterval(1UL);
+  if (navInterval.check()) {
+    navInterval.reset();
     nav.poll();
-   }
+  }
   
   // 1. handle web portal
   // send updates
@@ -415,9 +416,9 @@ void loop() {
     }
   }
 
-  // 3. handle frequency selection button group
-  if ( frequency.update() && frequency.hasSelection() ) {
-    switch (frequency.getValue()) {
+  // 3. handle sequence selection button group
+  if ( sequence.update() && sequence.hasSelection() ) {
+    switch (sequence.getValue()) {
       case 0:
         btnMode = btnAMode;
         break;
@@ -560,7 +561,7 @@ void handleBeat() {
   }
 
   // how far back from the beat do we need to trigger each poofer?
-  if (!frequency.hasSelection()) {
+  if (!sequence.hasSelection()) {
     beatFireA = false;
     beatFireB = false;
     beatFireC = false;
@@ -659,8 +660,6 @@ void setFireStatesDnb(byte counter) {
     case 15:
     case 16:
     case 17:
-    case 18:
-    case 19:
       beatFireB = true;
       beatFireC = true;
       break;
@@ -671,7 +670,6 @@ void setFireStatesDnb(byte counter) {
     case 27:
     case 28:
     case 29:
-    case 30:
       beatFireA = true;
       beatFireD = true;
       break;
@@ -682,18 +680,16 @@ void setFireStatesDnb(byte counter) {
     case 65:
     case 66:
     case 67:
-    case 68:
       beatFireB = true;
       beatFireC = true;
       break;
+    case 76:
     case 77:
     case 78:
     case 79:
     case 80:
     case 81:
     case 82:
-    case 83:
-    case 84:
       beatFireA = true;
       beatFireD = true;
       break;
@@ -767,7 +763,7 @@ void showBar(byte count) {
 // after 4 presses use the rolling average time between taps to set the manual BPM.
 // Sample in groupings spaced by X seconds of no-tap apart.
 #define MICROS_PER_MINUTE 60000000UL
-#define TAP_PROGRAMMING_EXPIRY_WINDOW_MICROS 1700000UL
+#define TAP_PROGRAMMING_EXPIRY_WINDOW_MICROS 1700000UL // start over after inactivity
 #define TAPS_BEFORE_WRITE 4
 unsigned long microsPerBeat;
 void handleTap() {

@@ -34,7 +34,6 @@ ex: -A0 means: pin A0 normally high, low when button pushed (reverse logic)
     #include "ClickEncoder.h"
 
 
-    namespace Menu {
 
       //emulate a stream based on clickEncoder movement returning +/- for every 'sensivity' steps
       //buffer not needer because we have an accumulator
@@ -112,7 +111,6 @@ ex: -A0 means: pin A0 normally high, low when button pushed (reverse logic)
             return 1;
         }
       };
-    }//namespace Menu
 
   #endif
 
