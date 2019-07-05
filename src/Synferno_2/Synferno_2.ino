@@ -161,6 +161,9 @@ byte SEQUENCE_BUTTON_PINS[NUM_SEQUENCE_BUTTONS] = {29, 30, 31, 32, 33};
 byte SEQUENCE_LED_PINS[NUM_SEQUENCE_BUTTONS] = {7, 8, 9, 10, 11};
 ButtonGroup sequence;
 
+// Sequences
+#include "sequences.h";
+
 /*
  * Begin Menu
  */
