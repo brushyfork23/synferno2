@@ -15,6 +15,8 @@ class Sequence_050 : public Sequence {
     
   public: 
     void populate() {
+        strcpy(this->title, "050");
+
         tick0.channel[0].priority = 3;
         tick0.channel[0].duration = POOF_SIZE_LARGE;
         tick0.channel[1].priority = 2;
@@ -33,7 +35,7 @@ class Sequence_050 : public Sequence {
         tick12.channel[2].duration = POOF_SIZE_LARGE;
         tick12.channel[3].priority = 3;
         tick12.channel[3].duration = POOF_SIZE_LARGE;
-        this->tick[24] = &tick12;
+        this->tick[12] = &tick12;
         
         tick24.channel[0].priority = 1;
         tick24.channel[0].duration = POOF_SIZE_LARGE;
@@ -43,7 +45,7 @@ class Sequence_050 : public Sequence {
         tick24.channel[2].duration = POOF_SIZE_LARGE;
         tick24.channel[3].priority = 2;
         tick24.channel[3].duration = POOF_SIZE_LARGE;
-        this->tick[48] = &tick24;
+        this->tick[24] = &tick24;
         
         tick36.channel[0].priority = 2;
         tick36.channel[0].duration = POOF_SIZE_LARGE;
@@ -53,7 +55,7 @@ class Sequence_050 : public Sequence {
         tick36.channel[2].duration = POOF_SIZE_LARGE;
         tick36.channel[3].priority = 1;
         tick36.channel[3].duration = POOF_SIZE_LARGE;
-        this->tick[76] = &tick36;
+        this->tick[36] = &tick36;
 
         tick48.channel[0].priority = 3;
         tick48.channel[0].duration = POOF_SIZE_LARGE;
@@ -63,7 +65,7 @@ class Sequence_050 : public Sequence {
         tick48.channel[2].duration = POOF_SIZE_LARGE;
         tick48.channel[3].priority = 3;
         tick48.channel[3].duration = POOF_SIZE_LARGE;
-        this->tick[0] = &tick48;
+        this->tick[48] = &tick48;
         
         tick60.channel[0].priority = 3;
         tick60.channel[0].duration = POOF_SIZE_LARGE;
@@ -73,7 +75,7 @@ class Sequence_050 : public Sequence {
         tick60.channel[2].duration = POOF_SIZE_LARGE;
         tick60.channel[3].priority = 3;
         tick60.channel[3].duration = POOF_SIZE_LARGE;
-        this->tick[24] = &tick60;
+        this->tick[60] = &tick60;
         
         tick72.channel[0].priority = 1;
         tick72.channel[0].duration = POOF_SIZE_LARGE;
@@ -83,7 +85,7 @@ class Sequence_050 : public Sequence {
         tick72.channel[2].duration = POOF_SIZE_LARGE;
         tick72.channel[3].priority = 2;
         tick72.channel[3].duration = POOF_SIZE_LARGE;
-        this->tick[48] = &tick72;
+        this->tick[72] = &tick72;
         
         tick84.channel[0].priority = 2;
         tick84.channel[0].duration = POOF_SIZE_LARGE;
@@ -93,7 +95,7 @@ class Sequence_050 : public Sequence {
         tick84.channel[2].duration = POOF_SIZE_LARGE;
         tick84.channel[3].priority = 1;
         tick84.channel[3].duration = POOF_SIZE_LARGE;
-        this->tick[76] = &tick84;
+        this->tick[84] = &tick84;
     }
 };
 

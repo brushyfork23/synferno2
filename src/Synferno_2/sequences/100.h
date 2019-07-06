@@ -11,45 +11,47 @@ class Sequence_100 : public Sequence {
     
   public: 
     void populate() {
-        tick0.channel[0].priority = 3;
+        strcpy(this->title, "100");
+
+        tick0.channel[0].priority = PRIORITY_LOW;
         tick0.channel[0].duration = POOF_SIZE_LARGE;
-        tick0.channel[1].priority = 2;
+        tick0.channel[1].priority = PRIORITY_HIGH;
         tick0.channel[1].duration = POOF_SIZE_LARGE;
-        tick0.channel[2].priority = 1;
+        tick0.channel[2].priority = PRIORITY_HIGHEST;
         tick0.channel[2].duration = POOF_SIZE_LARGE;
-        tick0.channel[3].priority = 3;
+        tick0.channel[3].priority = PRIORITY_LOW;
         tick0.channel[3].duration = POOF_SIZE_LARGE;
         this->tick[0] = &tick0;
         
-        tick24.channel[0].priority = 3;
+        tick24.channel[0].priority = PRIORITY_LOW;
         tick24.channel[0].duration = POOF_SIZE_LARGE;
-        tick24.channel[1].priority = 1;
+        tick24.channel[1].priority = PRIORITY_HIGHEST;
         tick24.channel[1].duration = POOF_SIZE_LARGE;
-        tick24.channel[2].priority = 2;
+        tick24.channel[2].priority = PRIORITY_HIGH;
         tick24.channel[2].duration = POOF_SIZE_LARGE;
-        tick24.channel[3].priority = 3;
+        tick24.channel[3].priority = PRIORITY_LOW;
         tick24.channel[3].duration = POOF_SIZE_LARGE;
         this->tick[24] = &tick24;
         
-        tick48.channel[0].priority = 1;
+        tick48.channel[0].priority = PRIORITY_HIGHEST;
         tick48.channel[0].duration = POOF_SIZE_LARGE;
-        tick48.channel[1].priority = 3;
+        tick48.channel[1].priority = PRIORITY_LOW;
         tick48.channel[1].duration = POOF_SIZE_LARGE;
-        tick48.channel[2].priority = 3;
+        tick48.channel[2].priority = PRIORITY_LOW;
         tick48.channel[2].duration = POOF_SIZE_LARGE;
-        tick48.channel[3].priority = 2;
+        tick48.channel[3].priority = PRIORITY_HIGH;
         tick48.channel[3].duration = POOF_SIZE_LARGE;
         this->tick[48] = &tick48;
         
-        tick72.channel[0].priority = 2;
+        tick72.channel[0].priority = PRIORITY_HIGH;
         tick72.channel[0].duration = POOF_SIZE_LARGE;
-        tick72.channel[1].priority = 3;
+        tick72.channel[1].priority = PRIORITY_LOW;
         tick72.channel[1].duration = POOF_SIZE_LARGE;
-        tick72.channel[2].priority = 3;
+        tick72.channel[2].priority = PRIORITY_LOW;
         tick72.channel[2].duration = POOF_SIZE_LARGE;
-        tick72.channel[3].priority = 1;
+        tick72.channel[3].priority = PRIORITY_HIGHEST;
         tick72.channel[3].duration = POOF_SIZE_LARGE;
-        this->tick[76] = &tick72;
+        this->tick[72] = &tick72;
     }
 };
 
