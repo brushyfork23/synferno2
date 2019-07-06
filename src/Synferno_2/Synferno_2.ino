@@ -159,10 +159,11 @@ Button bigRedButton;
 #define SEQUENCE_SCALE 4
 byte SEQUENCE_BUTTON_PINS[NUM_SEQUENCE_BUTTONS] = {29, 30, 31, 32, 33};
 byte SEQUENCE_LED_PINS[NUM_SEQUENCE_BUTTONS] = {7, 8, 9, 10, 11};
-ButtonGroup sequence;
+ButtonGroup sequenceButtons;
 
 // Sequences
 #include "sequences.h";
+
 
 /*
  * Begin Menu
@@ -184,8 +185,6 @@ U8X8_SSD1309_128X64_NONAME0_4W_SW_SPI u8x8(SCL, SDA, OLED_CS, OLED_DC, OLED_RST)
 #define MODE_MIDI 0
 #define MODE_MANUAL 1
 #define BTN_MODE_1_4 0
-#define BTN_MODE_1_2 1
-#define BTN_MODE_1 2
 #define BTN_MODE_2 3
 #define BTN_MODE_4 4
 #define BTN_MODE_DNB 5
@@ -199,9 +198,14 @@ int offset=0; // Number of clock ticks early to trigger the next beat
 int mode=MODE_MIDI;
 int btnAMode = BTN_MODE_4;
 int btnBMode = BTN_MODE_2;
-int btnCMode = BTN_MODE_1;
-int btnDMode = BTN_MODE_1_2;
 int btnEMode = BTN_MODE_1_4;
+
+
+struct Sequence *seqAPtr = &sequence100;
+struct Sequence *seqBPtr = &sequence050;
+struct Sequence *seqCPtr = &sequence100;
+struct Sequence *seqDPtr = &sequence050;
+struct Sequence *seqEPtr = &sequence100;
 
 result selectMidi();
 result selectManual();
@@ -219,49 +223,29 @@ TOGGLE(mode,modeMenu,"Mode     ",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE("Manual",MODE_MANUAL,selectManual,Menu::noEvent)
 );
 
-SELECT(btnAMode,bntAModeMenu,"Seq A   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE("4",BTN_MODE_4,configUpdate,Menu::noEvent)
-  ,VALUE("2",BTN_MODE_2,configUpdate,Menu::noEvent)
-  ,VALUE("1",BTN_MODE_1,configUpdate,Menu::noEvent)
-  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,Menu::noEvent)
-  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,Menu::noEvent)
-  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,Menu::noEvent)
+SELECT(seqAPtr,bntAModeMenu,"Seq A   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE(sequence100.title,&sequence100,configUpdate,Menu::noEvent)
+  ,VALUE(sequence050.title,&sequence050,configUpdate,Menu::noEvent)
 );
 
-SELECT(btnBMode,bntBModeMenu,"Seq B   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE("4",BTN_MODE_4,configUpdate,Menu::noEvent)
-  ,VALUE("2",BTN_MODE_2,configUpdate,Menu::noEvent)
-  ,VALUE("1",BTN_MODE_1,configUpdate,Menu::noEvent)
-  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,Menu::noEvent)
-  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,Menu::noEvent)
-  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,Menu::noEvent)
+SELECT(seqBPtr,bntBModeMenu,"Seq B   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE(sequence100.title,&sequence100,configUpdate,Menu::noEvent)
+  ,VALUE(sequence050.title,&sequence050,configUpdate,Menu::noEvent)
 );
 
-SELECT(btnCMode,bntCModeMenu,"Seq C   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE("4",BTN_MODE_4,configUpdate,Menu::noEvent)
-  ,VALUE("2",BTN_MODE_2,configUpdate,Menu::noEvent)
-  ,VALUE("1",BTN_MODE_1,configUpdate,Menu::noEvent)
-  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,Menu::noEvent)
-  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,Menu::noEvent)
-  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,Menu::noEvent)
+SELECT(seqCPtr,bntCModeMenu,"Seq C   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE(sequence100.title,&sequence100,configUpdate,Menu::noEvent)
+  ,VALUE(sequence050.title,&sequence050,configUpdate,Menu::noEvent)
 );
 
-SELECT(btnDMode,bntDModeMenu,"Seq D   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE("4",BTN_MODE_4,configUpdate,Menu::noEvent)
-  ,VALUE("2",BTN_MODE_2,configUpdate,Menu::noEvent)
-  ,VALUE("1",BTN_MODE_1,configUpdate,Menu::noEvent)
-  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,Menu::noEvent)
-  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,Menu::noEvent)
-  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,Menu::noEvent)
+SELECT(seqDPtr,bntDModeMenu,"Seq D   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE(sequence100.title,&sequence100,configUpdate,Menu::noEvent)
+  ,VALUE(sequence050.title,&sequence050,configUpdate,Menu::noEvent)
 );
 
-SELECT(btnEMode,bntEModeMenu,"Seq E   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE("4",BTN_MODE_4,configUpdate,Menu::noEvent)
-  ,VALUE("2",BTN_MODE_2,configUpdate,Menu::noEvent)
-  ,VALUE("1",BTN_MODE_1,configUpdate,Menu::noEvent)
-  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,Menu::noEvent)
-  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,Menu::noEvent)
-  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,Menu::noEvent)
+SELECT(seqEPtr,bntEModeMenu,"Seq E   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE(sequence100.title,&sequence100,configUpdate,Menu::noEvent)
+  ,VALUE(sequence050.title,&sequence050,configUpdate,Menu::noEvent)
 );
 
 MENU(mainMenu,"   SYNFERNO",Menu::doNothing,Menu::noEvent,Menu::noStyle
@@ -289,7 +273,7 @@ result selectManual() {
   mainMenu[2].enabled=enabledStatus;
   manualBeat.resetCounter();
   if (bpm == 0.0) {
-    bpm = 120.0;
+    setBpm(120.0);
   }
   return configUpdate();
 }
@@ -313,7 +297,7 @@ NAVROOT(nav,mainMenu,MAX_DEPTH,encStream,out);
 // Local variables
 long inNum = 0;
 char inCommand;
-int btnMode;
+struct Sequence *activeSequence;
 boolean beatSaysFire = false;
 boolean lastBeatSaysFire = false;
 boolean beatFireA = false;
@@ -380,7 +364,7 @@ void setup() {
   pinMode(LED_TAP_PIN, OUTPUT);
   manualBeat.setBPM(bpm);
   // sequences of poofs
-  sequence.begin(NUM_SEQUENCE_BUTTONS, SEQUENCE_BUTTON_PINS, SEQUENCE_LED_PINS);
+  sequenceButtons.begin(NUM_SEQUENCE_BUTTONS, SEQUENCE_BUTTON_PINS, SEQUENCE_LED_PINS);
 }
 
 void loop() {
@@ -420,22 +404,22 @@ void loop() {
   }
 
   // 3. handle sequence selection button group
-  if ( sequence.update() && sequence.hasSelection() ) {
-    switch (sequence.getValue()) {
+  if ( sequenceButtons.update() && sequenceButtons.hasSelection() ) {
+    switch (sequenceButtons.getValue()) {
       case 0:
-        btnMode = btnAMode;
+        activeSequence = seqAPtr;
         break;
       case 1:
-        btnMode = btnBMode;
+        activeSequence = seqBPtr;
         break;
       case 2:
-        btnMode = btnCMode;
+        activeSequence = seqCPtr;
         break;
       case 3:
-        btnMode = btnDMode;
+        activeSequence = seqDPtr;
         break;
       case 4:
-        btnMode = btnEMode;
+        activeSequence = seqEPtr;
         break;
     }
   }
@@ -544,11 +528,23 @@ boolean updateClockCounter() {
   boolean hasMidiUpdate = midi.update();
   boolean hasManualUpdate = manualBeat.update();
   if (mode == MODE_MIDI) {
-    bpm = midi.getBPM();
+    setBpm(midi.getBPM());
     return hasMidiUpdate;
   } else {
     return hasManualUpdate;
   }
+}
+
+void setBpm(float val) {
+  // set the new global value
+  bpm = val;
+  // update sequence priority support level
+  updateSequenceDegredation();
+}
+
+// determine what priority level we can support for the given bpm, duration, and sequence.
+void updateSequenceDegredation() {
+  activeSequence->setTicksAvailableBetweenTriggers(minimumTicksBetweenLargePoofTrigger());
 }
 
 // determine firing time and display beat information.
@@ -564,32 +560,24 @@ void handleBeat() {
   }
 
   // how far back from the beat do we need to trigger each poofer?
-  if (!sequence.hasSelection()) {
+  if (!sequenceButtons.hasSelection()) {
     beatFireA = false;
     beatFireB = false;
     beatFireC = false;
     beatFireD = false;
-  } else {
-    switch (btnMode) {
-      case BTN_MODE_4:
-        setFireStates4_4(counter, CLOCK_TICKS_PER_BEAT * 4);
-        break;
-      case BTN_MODE_2:
-        setFireStates4_4(counter, CLOCK_TICKS_PER_BEAT * 2);
-        break;
-      case BTN_MODE_1:
-        setFireStates4_4(counter, CLOCK_TICKS_PER_BEAT);
-        break;
-      case BTN_MODE_1_2:
-        setFireStates4_4(counter, CLOCK_TICKS_PER_BEAT / 2);
-        break;
-      case BTN_MODE_1_4:
-        setFireStates4_4(counter, CLOCK_TICKS_PER_BEAT / 4);
-        break;
-      case BTN_MODE_DNB:
-        setFireStatesDnb(counter);
-        break;
-    }
+  } else { 
+    TickTriggers triggers = activeSequence->getTickTriggers((CLOCK_TICKS_PER_BEAT - counter) % CLOCK_TICKS_PER_BEAT);
+
+    beatFireA = triggers.poofSizeA == DURATION_LARGE;
+    beatFireB = triggers.poofSizeB == DURATION_LARGE;
+    beatFireC = triggers.poofSizeC == DURATION_LARGE;
+    beatFireD = triggers.poofSizeD == DURATION_LARGE;
+
+    // TODO: ok now pass this to a rectifier/fire controller.
+    // Its job is to take in these trigger requests and keep track of them.
+    // So if it sees a DURATION_LARGE, it will fire for however long that is,
+    // even if the next clock update sends a DURATION_NONE.
+    // It'll also take in the manual fire button stuff, and will merge all those signals together.
   }
 }
 
@@ -717,6 +705,26 @@ boolean timeForFire( byte clock, byte start, byte stop ) {
   
 }
 
+/*
+  The minimum ticks between triggers is
+  ceil(millisPerTrigger / millisPerTick)
+
+  millisPerTrigger is (duration * millisPerTick) + lockout window
+
+  Fully expanded, minimum ticks between triggers would be:
+  duration * ((MILLIS_PER_MINUTE / bpm) / CLOCK_TICKS_PER_BEAT) + 200UL
+                                /
+        ((MILLIS_PER_MINUTE / bpm) / CLOCK_TICKS_PER_BEAT)
+  
+ */
+uint8_t minimumTicksBetweenLargePoofTrigger() {
+  int millisPerBeat = MILLIS_PER_MINUTE / bpm;
+  int millisPerTick = millisPerBeat / CLOCK_TICKS_PER_BEAT;
+
+  return ceil(duration + (200UL / millisPerTick));
+}
+
+
 // Given the bpm and duration, will this small of a ticksPerTrigger result
 // in more triggers than the poofers can handle.
 boolean tooFastForPoofers(byte ticksPerTrigger) {
@@ -789,7 +797,7 @@ void handleTap() {
   microsPerBeat = (microsPerBeat*(smoothDelta-1) + deltaTap)/smoothDelta;
 
   if (taps >= TAPS_BEFORE_WRITE) {
-    bpm = MICROS_PER_MINUTE * 1.0 / microsPerBeat;
+    setBpm(MICROS_PER_MINUTE * 1.0 / microsPerBeat);
     manualBeat.setBPM(bpm);
   }
 }
@@ -828,7 +836,7 @@ void handleWebserverUpdates() {
           Serial << F("duration: ") << inNum << endl;
           break;
         case 'B':
-          bpm = inNum;
+          setBpm(inNum);
           Serial << F("bpm: ") << inNum << endl;
           break;
         case 'M':

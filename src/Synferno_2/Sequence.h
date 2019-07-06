@@ -3,7 +3,11 @@
 
 #define MAX_TICKS 96 // 24 ticks per beat, 4 beats per stanza
 
-#define POOF_SIZE_LARGE 2
+enum poof_duration : uint8_t {
+  DURATION_NONE,
+  DURATION_SMALL,
+  DURATION_LARGE
+};
 
 #define PRIORITY_NO 0
 #define PRIORITY_LOW 1
@@ -12,16 +16,16 @@
 #define PRIORITY_HIGHEST 4
 #define N_PRIORITIES 5
 
-struct SequenceFireDictations {
-  boolean shouldFireA;
-  boolean shouldFireB;
-  boolean shouldFireC;
-  boolean shouldFireD;
+struct TickTriggers {
+  poof_duration poofSizeA;
+  poof_duration poofSizeB;
+  poof_duration poofSizeC;
+  poof_duration poofSizeD;
 }
 
 struct ChannelData {
   uint8_t priority;
-  uint8_t duration;
+  poof_duration duration;
 };
 
 struct TickData {
@@ -68,13 +72,53 @@ class Sequence {
       }
     }
 
-    // return the maximum priority 
-    uint8_t getPriority(uint8_t minTicksPerTrigger) {
-      for 
+    // given the ticks available between triggers, computed from the current bpm and the duration size,
+    // set the priority we are capable of rendering
+    void setTicksAvailableBetweenTriggers(uint8_t ticksAvailaleBetweenLargeTriggers) {
+      curPriority = PRIORITY_LOW;
+      while (
+        curPriority < PRIORITY_HIGHEST
+        && minTicksForPriority[p] >= ticksAvailaleBetweenLargeTriggers
+      ) {
+        curPriority++;
+      }
+    }
+
+    // Should we fire now?
+    TickTriggers getTickTriggers(uint8_t tickIndex) {
+      poof_duration triggerA = DURATION_NONE;
+      poof_duration triggerB = DURATION_NONE;
+      poof_duration triggerC = DURATION_NONE;
+      poof_duration triggerD = DURATION_NONE;
+      
+      if (this->tick[tickIndex]) {
+        if (this->tick[tickIndex]->channel[0].priority >= curPriority) {
+          triggerA = this->tick[tickIndex]->channel[0].duration;
+        }
+        if (this->tick[tickIndex]->channel[1].priority >= curPriority) {
+          triggerB = this->tick[tickIndex]->channel[1].duration;
+        }
+        if (this->tick[tickIndex]->channel[2].priority >= curPriority) {
+          triggerC = this->tick[tickIndex]->channel[2].duration;
+        }
+        if (this->tick[tickIndex]->channel[3].priority >= curPriority) {
+          triggerD = this->tick[tickIndex]->channel[3].duration;
+        }
+      }
+
+      return TickTriggers triggerStates{
+        triggerA,
+        triggerB,
+        triggerC,
+        triggerD
+      }
     }
 
   private:
     virtual void populate() = 0;
+
+    int curPriority = PRIORITY_NO;
+    
     uint8_t minTicksForPriority[N_PRIORITIES];
 };
 
