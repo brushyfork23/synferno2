@@ -1,7 +1,7 @@
 #ifndef Sequence_100_h
 #define Sequence_100_h
 
-#include "sequence.h"
+#include "../sequence.h"
 
 class Sequence_100 : public Sequence {
   struct TickData tick0;
@@ -21,7 +21,7 @@ class Sequence_100 : public Sequence {
         tick0.channel[2].duration = DURATION_LARGE;
         tick0.channel[3].priority = PRIORITY_LOW;
         tick0.channel[3].duration = DURATION_LARGE;
-        this->tick[0] = &tick0;
+        this->ticks[0] = &tick0;
         
         tick24.channel[0].priority = PRIORITY_LOW;
         tick24.channel[0].duration = DURATION_LARGE;
@@ -31,7 +31,7 @@ class Sequence_100 : public Sequence {
         tick24.channel[2].duration = DURATION_LARGE;
         tick24.channel[3].priority = PRIORITY_LOW;
         tick24.channel[3].duration = DURATION_LARGE;
-        this->tick[24] = &tick24;
+        this->ticks[24] = &tick24;
         
         tick48.channel[0].priority = PRIORITY_HIGHEST;
         tick48.channel[0].duration = DURATION_LARGE;
@@ -41,7 +41,7 @@ class Sequence_100 : public Sequence {
         tick48.channel[2].duration = DURATION_LARGE;
         tick48.channel[3].priority = PRIORITY_HIGH;
         tick48.channel[3].duration = DURATION_LARGE;
-        this->tick[48] = &tick48;
+        this->ticks[48] = &tick48;
         
         tick72.channel[0].priority = PRIORITY_HIGH;
         tick72.channel[0].duration = DURATION_LARGE;
@@ -51,7 +51,7 @@ class Sequence_100 : public Sequence {
         tick72.channel[2].duration = DURATION_LARGE;
         tick72.channel[3].priority = PRIORITY_HIGHEST;
         tick72.channel[3].duration = DURATION_LARGE;
-        this->tick[72] = &tick72;
+        this->ticks[72] = &tick72;
     }
 };
 

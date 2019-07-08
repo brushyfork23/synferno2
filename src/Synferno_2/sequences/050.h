@@ -1,7 +1,7 @@
 #ifndef Sequence_050_h
 #define Sequence_050_h
 
-#include "sequence.h"
+#include "../sequence.h"
 
 class Sequence_050 : public Sequence {
   struct TickData tick0;
@@ -25,7 +25,7 @@ class Sequence_050 : public Sequence {
         tick0.channel[2].duration = DURATION_LARGE;
         tick0.channel[3].priority = 3;
         tick0.channel[3].duration = DURATION_LARGE;
-        this->tick[0] = &tick0;
+        this->ticks[0] = &tick0;
         
         tick12.channel[0].priority = 3;
         tick12.channel[0].duration = DURATION_LARGE;
@@ -35,7 +35,7 @@ class Sequence_050 : public Sequence {
         tick12.channel[2].duration = DURATION_LARGE;
         tick12.channel[3].priority = 3;
         tick12.channel[3].duration = DURATION_LARGE;
-        this->tick[12] = &tick12;
+        this->ticks[12] = &tick12;
         
         tick24.channel[0].priority = 1;
         tick24.channel[0].duration = DURATION_LARGE;
@@ -45,7 +45,7 @@ class Sequence_050 : public Sequence {
         tick24.channel[2].duration = DURATION_LARGE;
         tick24.channel[3].priority = 2;
         tick24.channel[3].duration = DURATION_LARGE;
-        this->tick[24] = &tick24;
+        this->ticks[24] = &tick24;
         
         tick36.channel[0].priority = 2;
         tick36.channel[0].duration = DURATION_LARGE;
@@ -55,7 +55,7 @@ class Sequence_050 : public Sequence {
         tick36.channel[2].duration = DURATION_LARGE;
         tick36.channel[3].priority = 1;
         tick36.channel[3].duration = DURATION_LARGE;
-        this->tick[36] = &tick36;
+        this->ticks[36] = &tick36;
 
         tick48.channel[0].priority = 3;
         tick48.channel[0].duration = DURATION_LARGE;
@@ -65,7 +65,7 @@ class Sequence_050 : public Sequence {
         tick48.channel[2].duration = DURATION_LARGE;
         tick48.channel[3].priority = 3;
         tick48.channel[3].duration = DURATION_LARGE;
-        this->tick[48] = &tick48;
+        this->ticks[48] = &tick48;
         
         tick60.channel[0].priority = 3;
         tick60.channel[0].duration = DURATION_LARGE;
@@ -75,7 +75,7 @@ class Sequence_050 : public Sequence {
         tick60.channel[2].duration = DURATION_LARGE;
         tick60.channel[3].priority = 3;
         tick60.channel[3].duration = DURATION_LARGE;
-        this->tick[60] = &tick60;
+        this->ticks[60] = &tick60;
         
         tick72.channel[0].priority = 1;
         tick72.channel[0].duration = DURATION_LARGE;
@@ -85,7 +85,7 @@ class Sequence_050 : public Sequence {
         tick72.channel[2].duration = DURATION_LARGE;
         tick72.channel[3].priority = 2;
         tick72.channel[3].duration = DURATION_LARGE;
-        this->tick[72] = &tick72;
+        this->ticks[72] = &tick72;
         
         tick84.channel[0].priority = 2;
         tick84.channel[0].duration = DURATION_LARGE;
@@ -95,7 +95,7 @@ class Sequence_050 : public Sequence {
         tick84.channel[2].duration = DURATION_LARGE;
         tick84.channel[3].priority = 1;
         tick84.channel[3].duration = DURATION_LARGE;
-        this->tick[84] = &tick84;
+        this->ticks[84] = &tick84;
     }
 };
 

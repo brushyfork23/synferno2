@@ -27,7 +27,7 @@ boolean Button::update() {
   }
 }
 
-byte Button::getState() {
+boolean Button::getState() {
   return( this->currentState );
 }
 

@@ -1,3 +1,6 @@
+//TODO: add a menu option to set the minimum sequence priority we will render.
+// It'd be like simulating degredation, but would be used for fuel saving.
+
 // Compile for Arduino Mega 2560
 
 // Arduino Mega 2560: https://smile.amazon.com/Elegoo-EL-CB-003-ATmega2560-ATMEGA16U2-Arduino/dp/B01H4ZLZLQ
@@ -49,7 +52,6 @@
 // 38 to Pushbutton Fire 4 `signal`
 // 39 to Pushbutton Zero `signal`
 // 40 to Pushbutton Tap `signal`
-// 46 to Big Red Button (other side of big red button to GND)
 // VCC to Buck Converter `+5`
 // GND to GND
 
@@ -137,7 +139,6 @@ Solenoid fireA, fireB, fireC, fireD;
 #define BTN_FIRE_4_PIN 38
 #define BTN_ZERO_PIN 39
 #define BTN_TAP_PIN 40
-#define BTN_BIG_RED_BUTTON_PIN 46
 #define LED_FIRE_0_PIN 2
 #define LED_FIRE_1_PIN 3
 #define LED_FIRE_3_PIN 4
@@ -151,7 +152,6 @@ Button fireCNow;
 Button fireDNow;
 Button zero;
 Button tap;
-Button bigRedButton;
 
 // Sequence buttons
 #include "ButtonGroup.h"
@@ -164,6 +164,9 @@ ButtonGroup sequenceButtons;
 // Sequences
 #include "sequences.h";
 
+// Fire Marshal
+#include "FireMarshal.h"
+FireMarshal fireMarshal;
 
 /*
  * Begin Menu
@@ -213,8 +216,14 @@ result configUpdate() {
   hasConfigChange = true;
   return proceed;
 }
-result editBPM() {
+result onBPMMenuUpdate() {
   manualBeat.setBPM(bpm);
+  return configUpdate();
+}
+
+result onDurationMenuUpdate() {
+  fireMarshal.setDuration(duration);
+  updateSequenceDegredation();
   return configUpdate();
 }
 
@@ -224,34 +233,34 @@ TOGGLE(mode,modeMenu,"Mode     ",Menu::doNothing,Menu::noEvent,Menu::noStyle
 );
 
 SELECT(seqAPtr,bntAModeMenu,"Seq A   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE(sequence100.title,&sequence100,configUpdate,Menu::noEvent)
-  ,VALUE(sequence050.title,&sequence050,configUpdate,Menu::noEvent)
+  ,VALUE("100",&sequence100,configUpdate,Menu::noEvent)
+  ,VALUE("050",&sequence050,configUpdate,Menu::noEvent)
 );
 
 SELECT(seqBPtr,bntBModeMenu,"Seq B   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE(sequence100.title,&sequence100,configUpdate,Menu::noEvent)
-  ,VALUE(sequence050.title,&sequence050,configUpdate,Menu::noEvent)
+  ,VALUE("100",&sequence100,configUpdate,Menu::noEvent)
+  ,VALUE("050",&sequence050,configUpdate,Menu::noEvent)
 );
 
 SELECT(seqCPtr,bntCModeMenu,"Seq C   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE(sequence100.title,&sequence100,configUpdate,Menu::noEvent)
-  ,VALUE(sequence050.title,&sequence050,configUpdate,Menu::noEvent)
+  ,VALUE("100",&sequence100,configUpdate,Menu::noEvent)
+  ,VALUE("050",&sequence050,configUpdate,Menu::noEvent)
 );
 
 SELECT(seqDPtr,bntDModeMenu,"Seq D   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE(sequence100.title,&sequence100,configUpdate,Menu::noEvent)
-  ,VALUE(sequence050.title,&sequence050,configUpdate,Menu::noEvent)
+  ,VALUE("100",&sequence100,configUpdate,Menu::noEvent)
+  ,VALUE("050",&sequence050,configUpdate,Menu::noEvent)
 );
 
 SELECT(seqEPtr,bntEModeMenu,"Seq E   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE(sequence100.title,&sequence100,configUpdate,Menu::noEvent)
-  ,VALUE(sequence050.title,&sequence050,configUpdate,Menu::noEvent)
+  ,VALUE("100",&sequence100,configUpdate,Menu::noEvent)
+  ,VALUE("050",&sequence050,configUpdate,Menu::noEvent)
 );
 
 MENU(mainMenu,"   SYNFERNO",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,FIELD(duration,"Duration","",1,23,1,0,configUpdate,Menu::exitEvent,Menu::noStyle)
+  ,FIELD(duration,"Duration","",1,23,1,0,onDurationMenuUpdate,Menu::exitEvent,Menu::noStyle)
   ,FIELD(offset,"Offset  ","",0,23,1,0,configUpdate,Menu::exitEvent,Menu::wrapStyle)
-  ,FIELD(bpm,"BPM     ","",0.0,300.0,1.0,0.1,editBPM,Menu::exitEvent,Menu::noStyle)
+  ,FIELD(bpm,"BPM     ","",0.0,300.0,1.0,0.1,onBPMMenuUpdate,Menu::exitEvent,Menu::noStyle)
   ,SUBMENU(modeMenu)
   ,SUBMENU(bntAModeMenu)
   ,SUBMENU(bntBModeMenu)
@@ -298,12 +307,6 @@ NAVROOT(nav,mainMenu,MAX_DEPTH,encStream,out);
 long inNum = 0;
 char inCommand;
 struct Sequence *activeSequence;
-boolean beatSaysFire = false;
-boolean lastBeatSaysFire = false;
-boolean beatFireA = false;
-boolean beatFireB = false;
-boolean beatFireC = false;
-boolean beatFireD = false;
 
 void setup() {
   Serial.begin(115200);
@@ -325,6 +328,11 @@ void setup() {
   */
   u8x8.setFont(u8x8_font_artossans8_r);
 
+  // load up the sequences
+  Sequences::init();
+  Serial.println(sequence100.title);
+  Serial.println(sequence050.title);
+
   // configure Menu
   nav.showTitle=false;
   mainMenu[2].enabled=disabledStatus;
@@ -340,7 +348,6 @@ void setup() {
 
   // buttons
   // make fire now
-  bigRedButton.begin(BTN_BIG_RED_BUTTON_PIN);
   fireAllNow.begin(BTN_FIRE_2_PIN);
   fireANow.begin(BTN_FIRE_0_PIN);
   analogWrite(LED_FIRE_0_PIN, BRIGHTNESS_DIM_RED);
@@ -365,6 +372,9 @@ void setup() {
   manualBeat.setBPM(bpm);
   // sequences of poofs
   sequenceButtons.begin(NUM_SEQUENCE_BUTTONS, SEQUENCE_BUTTON_PINS, SEQUENCE_LED_PINS);
+
+  // fire up the fire marshal
+  fireMarshal.setDuration(duration);
 }
 
 void loop() {
@@ -436,61 +446,65 @@ void loop() {
   // 5. handle beat
   // if we have no beat (manual or MIDI), shut it down.
   if (getClockCounter()==255) {
-    beatSaysFire = false;
+    fireMarshal.setSequenceTriggers(DURATION_NONE, DURATION_NONE, DURATION_NONE, DURATION_NONE);
   }
   // if we have a clock tick, update the firing status and beat indicators.
   if( updateClockCounter() ) {
     handleBeat();
   }
 
-  // 6. handle poofers
-  // Turn the poofers on or off, depending on beat and buttons.
-  // update the state of the fire-now buttons
-  bigRedButton.update();
+  // 6. Handle poofers.
+  // provide the fire marshal with the most up-to-date button states
   fireAllNow.update();
   fireANow.update();
   fireBNow.update();
   fireCNow.update();
   fireDNow.update();
-  // if any of the relevant states of buttons or clicks indicate that
-  // it's time to fire, ensure the poofer is lit.  Otherwise, ensure
-  // that it is extinguished.
-  if (bigRedButton.getState() || fireAllNow.getState() || fireANow.getState() || beatFireA) {
+  fireMarshal.setManualAll(fireAllNow.getState());
+  fireMarshal.setManualA(fireANow.getState());
+  fireMarshal.setManualB(fireBNow.getState());
+  fireMarshal.setManualC(fireCNow.getState());
+  fireMarshal.setManualD(fireDNow.getState());
+  // instruct fire marshal to process one clock tick, determining new poofer states
+  fireMarshal.tick();
+  // actually turn the poofers on or off, based on the determination of the fire marshal
+  if (fireMarshal.getFireStateA()) {
     if (!fireA.getState()) {
-      fireA.on();
+        fireA.on();
     }
   } else {
-    if (fireA.getState()) {
-      fireA.off();
-    }
+      if (fireA.getState()) {
+          fireA.off();
+      }
   }
-  if (bigRedButton.getState() || fireAllNow.getState() || fireBNow.getState() || beatFireB) {
-    if (!fireB.getState()) {
-      fireB.on();
-    }
+  if (fireMarshal.getFireStateB()) {
+      if (!fireB.getState()) {
+          fireB.on();
+      }
   } else {
-    if (fireB.getState()) {
-      fireB.off();
-    }
+      if (fireB.getState()) {
+          fireB.off();
+      }
   }
-  if (bigRedButton.getState() || fireAllNow.getState() || fireCNow.getState() || beatFireC) {
-    if (!fireC.getState()) {
-      fireC.on();
-    }
+  if (fireMarshal.getFireStateC()) {
+      if (!fireC.getState()) {
+          fireC.on();
+      }
   } else {
-    if (fireC.getState()) {
-      fireC.off();
-    }
+      if (fireC.getState()) {
+          fireC.off();
+      }
   }
-  if (bigRedButton.getState() || fireAllNow.getState() || fireDNow.getState() || beatFireD) {
-    if (!fireD.getState()) {
-      fireD.on();
-    }
+  if (fireMarshal.getFireStateD()) {
+      if (!fireD.getState()) {
+          fireD.on();
+      }
   } else {
-    if (fireD.getState()) {
-      fireD.off();
-    }
+      if (fireD.getState()) {
+          fireD.off();
+      }
   }
+        
   
   // 7. handle fire indicators
   // Report changes in firing status (change in solenoid state) by lighting the fire-now buttons.
@@ -538,13 +552,15 @@ boolean updateClockCounter() {
 void setBpm(float val) {
   // set the new global value
   bpm = val;
-  // update sequence priority support level
-  updateSequenceDegredation();
+  if (bpm > 0) {
+    // update sequence priority support level
+    updateSequenceDegredation();
+  }
 }
 
 // determine what priority level we can support for the given bpm, duration, and sequence.
 void updateSequenceDegredation() {
-  activeSequence->setTicksAvailableBetweenTriggers(minimumTicksBetweenLargePoofTrigger());
+  activeSequence->updateViablePriority(minimumTicksBetweenLargePoofTrigger());
 }
 
 // determine firing time and display beat information.
@@ -561,129 +577,11 @@ void handleBeat() {
 
   // how far back from the beat do we need to trigger each poofer?
   if (!sequenceButtons.hasSelection()) {
-    beatFireA = false;
-    beatFireB = false;
-    beatFireC = false;
-    beatFireD = false;
+    fireMarshal.setSequenceTriggers(DURATION_NONE, DURATION_NONE, DURATION_NONE, DURATION_NONE);
   } else { 
-    TickTriggers triggers = activeSequence->getTickTriggers((CLOCK_TICKS_PER_BEAT - counter) % CLOCK_TICKS_PER_BEAT);
-
-    beatFireA = triggers.poofSizeA == DURATION_LARGE;
-    beatFireB = triggers.poofSizeB == DURATION_LARGE;
-    beatFireC = triggers.poofSizeC == DURATION_LARGE;
-    beatFireD = triggers.poofSizeD == DURATION_LARGE;
-
-    // TODO: ok now pass this to a rectifier/fire controller.
-    // Its job is to take in these trigger requests and keep track of them.
-    // So if it sees a DURATION_LARGE, it will fire for however long that is,
-    // even if the next clock update sends a DURATION_NONE.
-    // It'll also take in the manual fire button stuff, and will merge all those signals together.
-  }
-}
-
-// Set each fire state based on a 4/4 beat
-void setFireStates4_4(byte counter, int clocksPerTrigger) {
-  byte fireAOnAt;
-  byte fireBOnAt;
-  byte fireCOnAt;
-  byte fireDOnAt;
-  byte modifiedClocksPerTrigger = clocksPerTrigger;
-  // if the triggers are coming too often, spread them out
-  if (!tooFastForPoofers(clocksPerTrigger)) {
-    // 1 group
-    fireAOnAt = (clocksPerTrigger - offset) % clocksPerTrigger;
-    fireBOnAt = (clocksPerTrigger - offset) % clocksPerTrigger;
-    fireCOnAt = (clocksPerTrigger - offset) % clocksPerTrigger;
-    fireDOnAt = (clocksPerTrigger - offset) % clocksPerTrigger;
-  } else if (!tooFastForPoofers(clocksPerTrigger*2)) {
-    // 2 groups; double the ticks-per-trigger window and offset half of the poofers by 1/2 ticks
-    modifiedClocksPerTrigger = clocksPerTrigger * 2;
-
-    fireAOnAt = (modifiedClocksPerTrigger - offset + clocksPerTrigger) % modifiedClocksPerTrigger;
-    fireBOnAt = (modifiedClocksPerTrigger - offset) % modifiedClocksPerTrigger;
-    fireCOnAt = (modifiedClocksPerTrigger - offset) % modifiedClocksPerTrigger;
-    fireDOnAt = (modifiedClocksPerTrigger - offset + clocksPerTrigger) % modifiedClocksPerTrigger;
-  } else {
-    // 4 groups; quadruple the ticks-per-trigger window and offset each of the poofers by 1/4 ticks
-    modifiedClocksPerTrigger = clocksPerTrigger * 4;
-
-    fireAOnAt = (modifiedClocksPerTrigger - offset + clocksPerTrigger) % modifiedClocksPerTrigger;
-    fireBOnAt = (modifiedClocksPerTrigger - offset + (3 * clocksPerTrigger)) % modifiedClocksPerTrigger;
-    fireCOnAt = (modifiedClocksPerTrigger - offset) % modifiedClocksPerTrigger;
-    fireDOnAt = (modifiedClocksPerTrigger - offset + (2 * clocksPerTrigger)) % modifiedClocksPerTrigger;
-  }
-  
-  // and when do we need to turn them off?
-  byte fireAOffAt = (fireAOnAt + duration) % modifiedClocksPerTrigger;
-  byte fireBOffAt = (fireBOnAt + duration) % modifiedClocksPerTrigger;
-  byte fireCOffAt = (fireCOnAt + duration) % modifiedClocksPerTrigger;
-  byte fireDOffAt = (fireDOnAt + duration) % modifiedClocksPerTrigger;
-  
-  // given the current counter and on/off times, should we shoot fire or not?
-  beatFireA = timeForFire( counter % modifiedClocksPerTrigger, fireAOnAt, fireAOffAt );
-  beatFireB = timeForFire( counter % modifiedClocksPerTrigger, fireBOnAt, fireBOffAt );
-  beatFireC = timeForFire( counter % modifiedClocksPerTrigger, fireCOnAt, fireCOffAt );
-  beatFireD = timeForFire( counter % modifiedClocksPerTrigger, fireDOnAt, fireDOffAt );
-}
-
-void setFireStatesDnb(byte counter) {
-  beatFireA = false;
-  beatFireB = false;
-  beatFireC = false;
-  beatFireD = false;
-
-  switch (counter) {
-    case 0:
-    case 1:
-    case 2:
-    case 3:
-    case 4:
-    case 5:
-    case 6:
-    case 7:
-    case 8:
-    case 9:
-    case 10:
-    case 11:
-    case 12:
-    case 13:
-    case 14:
-    case 15:
-    case 16:
-    case 17:
-      beatFireB = true;
-      beatFireC = true;
-      break;
-    case 23:
-    case 24:
-    case 25:
-    case 26:
-    case 27:
-    case 28:
-    case 29:
-      beatFireA = true;
-      beatFireD = true;
-      break;
-    case 61:
-    case 62:
-    case 63:
-    case 64:
-    case 65:
-    case 66:
-    case 67:
-      beatFireB = true;
-      beatFireC = true;
-      break;
-    case 76:
-    case 77:
-    case 78:
-    case 79:
-    case 80:
-    case 81:
-    case 82:
-      beatFireA = true;
-      beatFireD = true;
-      break;
+    TickTriggers triggers = activeSequence->getTickTriggers((counter + offset) % CLOCK_TICKS_PER_BEAT);
+    // Serial << F("tick triggers: A ") << triggers.poofSizeA << F(" B ") << triggers.poofSizeB << F(" C ") << triggers.poofSizeC << F(" D ") << triggers.poofSizeD << endl;
+    fireMarshal.setSequenceTriggers(triggers.poofSizeA, triggers.poofSizeB, triggers.poofSizeC, triggers.poofSizeD);
   }
 }
 
@@ -816,6 +714,7 @@ byte getClockCounter() {
 }
 
 void handleWebserverUpdates() {
+  return;
   while (Serial1.available() > 0) {
     int inChar = Serial1.read();
     Serial << (char)inChar;
