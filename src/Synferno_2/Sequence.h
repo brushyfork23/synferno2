@@ -42,9 +42,9 @@ class Sequence {
 
     void init();
 
-    // given the ticks available between triggers, computed from the current bpm and the duration size,
+    // given the minimum ticks required to trigger a large poof, computed from the current bpm and the duration size,
     // set the priority we are capable of rendering
-    void updateViablePriority(uint8_t ticksAvailaleBetweenLargeTriggers);
+    void updateViablePriority(uint8_t ticksRequiredForLargePoof);
 
     // Should we fire now?
     TickTriggers getTickTriggers(uint8_t tickIndex);

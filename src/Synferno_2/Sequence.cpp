@@ -52,9 +52,9 @@ void Sequence::init() {
 
 // given the ticks available between triggers, computed from the current bpm and the duration size,
 // set the priority we are capable of rendering
-void Sequence::updateViablePriority(uint8_t ticksAvailaleBetweenLargeTriggers) {
+void Sequence::updateViablePriority(uint8_t ticksRequiredForLargePoof) {
     Serial << F("Setting new priority:") << endl;
-    Serial << F("ticksAvailaleBetweenLargeTriggers: ") << ticksAvailaleBetweenLargeTriggers << endl;
+    Serial << F("ticksRequiredForLargePoof: ") << ticksRequiredForLargePoof << endl;
     Serial << F("PRIORITY_LOW: ") << this->minTicksForPriority[PRIORITY_LOW] << endl;
     Serial << F("PRIORITY_MEDIUM: ") << this->minTicksForPriority[PRIORITY_MEDIUM] << endl;
     Serial << F("PRIORITY_HIGH: ") << this->minTicksForPriority[PRIORITY_HIGH] << endl;
@@ -62,7 +62,7 @@ void Sequence::updateViablePriority(uint8_t ticksAvailaleBetweenLargeTriggers) {
     curPriority = PRIORITY_LOW;
     while (
         curPriority < PRIORITY_HIGHEST
-        && this->minTicksForPriority[curPriority] >= ticksAvailaleBetweenLargeTriggers
+        && this->minTicksForPriority[curPriority] < ticksRequiredForLargePoof
     ) {
         curPriority++;
     }
@@ -72,12 +72,14 @@ void Sequence::updateViablePriority(uint8_t ticksAvailaleBetweenLargeTriggers) {
 
 // Should we fire now?
 TickTriggers Sequence::getTickTriggers(uint8_t tickIndex) {
-    // Serial << F("poof sizes for tick ") << tickIndex << F(": ");
+    Serial << F("tick ") << tickIndex << F(" ");
     poof_duration triggerA = DURATION_NONE;
     poof_duration triggerB = DURATION_NONE;
     poof_duration triggerC = DURATION_NONE;
     poof_duration triggerD = DURATION_NONE;
+    // TODO: why is this only returning true for tick 12 for pattern 050?
     if (this->ticks[tickIndex]) {
+        Serial << F("curPriority: ") << curPriority << F(" ");
         if (this->ticks[tickIndex]->channel[0].priority >= curPriority) {
             triggerA = this->ticks[tickIndex]->channel[0].duration;
         }
@@ -90,10 +92,10 @@ TickTriggers Sequence::getTickTriggers(uint8_t tickIndex) {
         if (this->ticks[tickIndex]->channel[3].priority >= curPriority) {
             triggerD = this->ticks[tickIndex]->channel[3].duration;
         }
-        // Serial << F("A ") << this->ticks[tickIndex]->channel[0].priority << F(":") << (this->ticks[tickIndex]->channel[0].priority >= curPriority) << F(":") << triggerA;
-        // Serial << F(" B ") << this->ticks[tickIndex]->channel[1].priority << F(":") << (this->ticks[tickIndex]->channel[1].priority >= curPriority) << F(":") << triggerB;
-        // Serial << F(" C ") << this->ticks[tickIndex]->channel[2].priority << F(":") << (this->ticks[tickIndex]->channel[2].priority >= curPriority) << F(":") << triggerC;
-        // Serial << F(" D ") << this->ticks[tickIndex]->channel[3].priority << F(":") << (this->ticks[tickIndex]->channel[3].priority >= curPriority) << F(":") << triggerD << endl;
+        Serial << F("A ") << this->ticks[tickIndex]->channel[0].priority << F(":") << (this->ticks[tickIndex]->channel[0].priority >= curPriority) << F(":") << triggerA;
+        Serial << F(" B ") << this->ticks[tickIndex]->channel[1].priority << F(":") << (this->ticks[tickIndex]->channel[1].priority >= curPriority) << F(":") << triggerB;
+        Serial << F(" C ") << this->ticks[tickIndex]->channel[2].priority << F(":") << (this->ticks[tickIndex]->channel[2].priority >= curPriority) << F(":") << triggerC;
+        Serial << F(" D ") << this->ticks[tickIndex]->channel[3].priority << F(":") << (this->ticks[tickIndex]->channel[3].priority >= curPriority) << F(":") << triggerD << endl;
     }
 
     return TickTriggers {

@@ -218,6 +218,7 @@ result configUpdate() {
 }
 result onBPMMenuUpdate() {
   manualBeat.setBPM(bpm);
+  updateSequenceDegredation();
   return configUpdate();
 }
 
@@ -432,6 +433,7 @@ void loop() {
         activeSequence = seqEPtr;
         break;
     }
+    updateSequenceDegredation();
   }
   
   // 4. handle zero button
@@ -604,6 +606,8 @@ boolean timeForFire( byte clock, byte start, byte stop ) {
 }
 
 /*
+  Compute the number of ticks required to perform a large poof.
+
   The minimum ticks between triggers is
   ceil(millisPerTrigger / millisPerTick)
 
