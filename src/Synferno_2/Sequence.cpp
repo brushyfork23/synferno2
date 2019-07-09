@@ -2,7 +2,7 @@
 
 void Sequence::init()
 {
-    // When not initiazlized, no sequence should have a reachable minimum requirement for firing
+    // When not initiazlized, sequences should do the least
     for (uint8_t p=PRIORITY_NO; p<N_PRIORITIES; p++) {
         this->minTicksForPriority[p] = MAX_TICKS;
     }
@@ -53,7 +53,7 @@ void Sequence::populateMinimumRequirementsForTriggers() {
 void Sequence::updateViablePriority(uint8_t ticksRequiredForLargePoof) {
     curPriority = PRIORITY_LOW;
     while (
-        curPriority < PRIORITY_HIGHEST
+        curPriority < PRIORITY_HIGH
         && this->minTicksForPriority[curPriority] < ticksRequiredForLargePoof
     ) {
         curPriority++;

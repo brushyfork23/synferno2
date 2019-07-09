@@ -10,13 +10,13 @@ class Sequence_400 : public Sequence {
     void populateTickData() {
         strcpy(this->title, "400");
 
-        tick0.channel[0].priority = PRIORITY_LOW;
+        tick0.channel[0].priority = PRIORITY_HIGH;
         tick0.channel[0].duration = DURATION_LARGE;
-        tick0.channel[1].priority = PRIORITY_LOW;
+        tick0.channel[1].priority = PRIORITY_HIGH;
         tick0.channel[1].duration = DURATION_LARGE;
-        tick0.channel[2].priority = PRIORITY_LOW;
+        tick0.channel[2].priority = PRIORITY_HIGH;
         tick0.channel[2].duration = DURATION_LARGE;
-        tick0.channel[3].priority = PRIORITY_LOW;
+        tick0.channel[3].priority = PRIORITY_HIGH;
         tick0.channel[3].duration = DURATION_LARGE;
         this->ticks[0] = &tick0;
     }

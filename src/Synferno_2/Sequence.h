@@ -2,6 +2,7 @@
 #define Sequence_h
 
 #include "Arduino.h"
+#include <Streaming.h>
 
 #define MAX_TICKS 96 // 24 ticks per beat, 4 beats per stanza
 
@@ -10,7 +11,6 @@ enum trigger_priority : uint8_t {
   PRIORITY_LOW,
   PRIORITY_MEDIUM,
   PRIORITY_HIGH,
-  PRIORITY_HIGHEST,
 
   N_PRIORITIES
 };
