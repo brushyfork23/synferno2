@@ -194,28 +194,18 @@ U8X8_SSD1309_128X64_NONAME0_4W_SW_SPI u8x8(SCL, SDA, OLED_CS, OLED_DC, OLED_RST)
 
 #define MODE_MIDI 0
 #define MODE_MANUAL 1
-#define BTN_MODE_1_4 0
-#define BTN_MODE_2 3
-#define BTN_MODE_4 4
-#define BTN_MODE_DNB 5
-#define BTN_MODE_RACE100L 6
-#define BTN_MODE_RACE050L 7
-#define BTN_MODE_TO_AND_FRO_050L 8
 boolean hasConfigChange = false;
 int duration=7; // Number of clock ticks per beat to fire
 float bpm=120.0;
 int offset=0; // Number of clock ticks early to trigger the next beat
 int mode=MODE_MIDI;
-int btnAMode = BTN_MODE_4;
-int btnBMode = BTN_MODE_2;
-int btnEMode = BTN_MODE_1_4;
 
 
-struct Sequence *seqAPtr = &sequence100;
-struct Sequence *seqBPtr = &sequence050;
+struct Sequence *seqAPtr = &sequence400;
+struct Sequence *seqBPtr = &sequence200;
 struct Sequence *seqCPtr = &sequence100;
 struct Sequence *seqDPtr = &sequence050;
-struct Sequence *seqEPtr = &sequence100;
+struct Sequence *seqEPtr = &sequence025;
 
 result selectMidi();
 result selectManual();
@@ -241,28 +231,43 @@ TOGGLE(mode,modeMenu,"Mode     ",Menu::doNothing,Menu::noEvent,Menu::noStyle
 );
 
 SELECT(seqAPtr,bntAModeMenu,"Seq A   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE("400",&sequence400,configUpdate,Menu::noEvent)
+  ,VALUE("200",&sequence200,configUpdate,Menu::noEvent)
   ,VALUE("100",&sequence100,configUpdate,Menu::noEvent)
   ,VALUE("050",&sequence050,configUpdate,Menu::noEvent)
+  ,VALUE("025",&sequence025,configUpdate,Menu::noEvent)
 );
 
 SELECT(seqBPtr,bntBModeMenu,"Seq B   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE("400",&sequence400,configUpdate,Menu::noEvent)
+  ,VALUE("200",&sequence200,configUpdate,Menu::noEvent)
   ,VALUE("100",&sequence100,configUpdate,Menu::noEvent)
   ,VALUE("050",&sequence050,configUpdate,Menu::noEvent)
+  ,VALUE("025",&sequence025,configUpdate,Menu::noEvent)
 );
 
 SELECT(seqCPtr,bntCModeMenu,"Seq C   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE("400",&sequence400,configUpdate,Menu::noEvent)
+  ,VALUE("200",&sequence200,configUpdate,Menu::noEvent)
   ,VALUE("100",&sequence100,configUpdate,Menu::noEvent)
   ,VALUE("050",&sequence050,configUpdate,Menu::noEvent)
+  ,VALUE("025",&sequence025,configUpdate,Menu::noEvent)
 );
 
 SELECT(seqDPtr,bntDModeMenu,"Seq D   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE("400",&sequence400,configUpdate,Menu::noEvent)
+  ,VALUE("200",&sequence200,configUpdate,Menu::noEvent)
   ,VALUE("100",&sequence100,configUpdate,Menu::noEvent)
   ,VALUE("050",&sequence050,configUpdate,Menu::noEvent)
+  ,VALUE("025",&sequence025,configUpdate,Menu::noEvent)
 );
 
 SELECT(seqEPtr,bntEModeMenu,"Seq E   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE("400",&sequence400,configUpdate,Menu::noEvent)
+  ,VALUE("200",&sequence200,configUpdate,Menu::noEvent)
   ,VALUE("100",&sequence100,configUpdate,Menu::noEvent)
   ,VALUE("050",&sequence050,configUpdate,Menu::noEvent)
+  ,VALUE("025",&sequence025,configUpdate,Menu::noEvent)
 );
 
 MENU(mainMenu,"   SYNFERNO",Menu::doNothing,Menu::noEvent,Menu::noStyle
@@ -341,8 +346,6 @@ void setup() {
 
   // this sequence is not actually active, but this way updates to the "current sequence" don't attempt to set null values
   activeSequence = seqAPtr;
-  Serial.println(sequence100.title);
-  Serial.println(sequence050.title);
 
   // configure Menu
   nav.showTitle=false;

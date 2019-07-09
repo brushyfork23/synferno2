@@ -67,7 +67,6 @@ TickTriggers Sequence::getTickTriggers(uint8_t tickIndex) {
     poof_duration triggerC = DURATION_NONE;
     poof_duration triggerD = DURATION_NONE;
     if (this->ticks[tickIndex]) {
-        Serial << F("curPriority: ") << curPriority << F(" ");
         if (this->ticks[tickIndex]->channel[0].priority >= curPriority) {
             triggerA = this->ticks[tickIndex]->channel[0].duration;
         }

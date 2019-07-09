@@ -2,7 +2,6 @@
 #define Sequence_h
 
 #include "Arduino.h"
-#include <Streaming.h>
 
 #define MAX_TICKS 96 // 24 ticks per beat, 4 beats per stanza
 
