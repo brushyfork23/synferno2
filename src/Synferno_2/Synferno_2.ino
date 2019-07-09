@@ -1,3 +1,6 @@
+//TODO: add a menu option to set the minimum sequence priority we will render.
+// It'd be like simulating degredation, but would be used for fuel saving.
+
 // Compile for Arduino Mega 2560
 
 // Arduino Mega 2560: https://smile.amazon.com/Elegoo-EL-CB-003-ATmega2560-ATMEGA16U2-Arduino/dp/B01H4ZLZLQ
@@ -15,8 +18,8 @@
 // A10 to Rotary Encoder `DT`
 // 2 to Pushbutton Fire 0 `LED`
 // 3 to Pushbutton Fire 1 `LED`
-// 4 to Pushbutton Fire 3 `LED`
-// 5 to Pushbutton Fire 4 `LED`
+// 4 to Pushbutton Fire 2 `LED`
+// 5 to Pushbutton Fire 3 `LED`
 // 6 to Pushbutton Zero `LED`
 // 7 to Pushbutton Freq 0 `LED`
 // 8 to Pushbutton Freq 1 `LED`
@@ -44,13 +47,19 @@
 // 33 to Pushbutton Freq 4 `signal`
 // 34 to Pushbutton Fire 0 `signal`
 // 35 to Pushbutton Fire 1 `signal`
-// 36 to Pushbutton Fire 2 `signal`
-// 37 to Pushbutton Fire 3 `signal`
-// 38 to Pushbutton Fire 4 `signal`
+// 36 to Pushbutton Fire All `signal`
+// 37 to Pushbutton Fire 2 `signal`
+// 38 to Pushbutton Fire 3 `signal`
 // 39 to Pushbutton Zero `signal`
 // 40 to Pushbutton Tap `signal`
-// 46 to Big Red Button (other side of big red button to GND)
+
+// Is this actually necessary?
+// The mega should be getting its power from the 12v through the barrel jack
+// and all the 5v components should be powered from the buck converter.
+// This would be taking the regulated +5 on the mega and piping it into
+// the `+5` rail, and we probably don't want other components pulling off the mega for power.
 // VCC to Buck Converter `+5`
+
 // GND to GND
 
 // WEMOS LOLIN D1 mini (ESP8266)
@@ -132,16 +141,15 @@ Solenoid fireA, fireB, fireC, fireD;
 #define BRIGHTNESS_DIM_YELLOW 30
 #define BTN_FIRE_0_PIN 34
 #define BTN_FIRE_1_PIN 35
-#define BTN_FIRE_2_PIN 36
-#define BTN_FIRE_3_PIN 37
-#define BTN_FIRE_4_PIN 38
+#define BTN_FIRE_2_PIN 37
+#define BTN_FIRE_3_PIN 38
+#define BTN_FIRE_ALL_PIN 36
 #define BTN_ZERO_PIN 39
 #define BTN_TAP_PIN 40
-#define BTN_BIG_RED_BUTTON_PIN 46
 #define LED_FIRE_0_PIN 2
 #define LED_FIRE_1_PIN 3
-#define LED_FIRE_3_PIN 4
-#define LED_FIRE_4_PIN 5
+#define LED_FIRE_2_PIN 4
+#define LED_FIRE_3_PIN 5
 #define LED_ZERO_PIN 6
 #define LED_TAP_PIN 12
 Button fireAllNow;
@@ -151,7 +159,6 @@ Button fireCNow;
 Button fireDNow;
 Button zero;
 Button tap;
-Button bigRedButton;
 
 // Sequence buttons
 #include "ButtonGroup.h"
@@ -159,7 +166,14 @@ Button bigRedButton;
 #define SEQUENCE_SCALE 4
 byte SEQUENCE_BUTTON_PINS[NUM_SEQUENCE_BUTTONS] = {29, 30, 31, 32, 33};
 byte SEQUENCE_LED_PINS[NUM_SEQUENCE_BUTTONS] = {7, 8, 9, 10, 11};
-ButtonGroup sequence;
+ButtonGroup sequenceButtons;
+
+// Sequences
+#include "sequences.h";
+
+// Fire Marshal
+#include "FireMarshal.h"
+FireMarshal fireMarshal;
 
 /*
  * Begin Menu
@@ -180,25 +194,18 @@ U8X8_SSD1309_128X64_NONAME0_4W_SW_SPI u8x8(SCL, SDA, OLED_CS, OLED_DC, OLED_RST)
 
 #define MODE_MIDI 0
 #define MODE_MANUAL 1
-#define BTN_MODE_1_4 0
-#define BTN_MODE_1_2 1
-#define BTN_MODE_1 2
-#define BTN_MODE_2 3
-#define BTN_MODE_4 4
-#define BTN_MODE_DNB 5
-#define BTN_MODE_RACE100L 6
-#define BTN_MODE_RACE050L 7
-#define BTN_MODE_TO_AND_FRO_050L 8
 boolean hasConfigChange = false;
 int duration=7; // Number of clock ticks per beat to fire
 float bpm=120.0;
 int offset=0; // Number of clock ticks early to trigger the next beat
 int mode=MODE_MIDI;
-int btnAMode = BTN_MODE_4;
-int btnBMode = BTN_MODE_2;
-int btnCMode = BTN_MODE_1;
-int btnDMode = BTN_MODE_1_2;
-int btnEMode = BTN_MODE_1_4;
+
+
+struct Sequence *seqAPtr = &sequence_cbda_400;
+struct Sequence *seqBPtr = &sequence_cbda_200;
+struct Sequence *seqCPtr = &sequence_cbda_100;
+struct Sequence *seqDPtr = &sequence_cbda_050;
+struct Sequence *seqEPtr = &sequence_cbda_025;
 
 result selectMidi();
 result selectManual();
@@ -206,8 +213,15 @@ result configUpdate() {
   hasConfigChange = true;
   return proceed;
 }
-result editBPM() {
+result onBPMMenuUpdate() {
   manualBeat.setBPM(bpm);
+  setBpm(bpm);
+  return configUpdate();
+}
+
+result onDurationMenuUpdate() {
+  fireMarshal.setDuration(duration);
+  updateSequenceDegredation();
   return configUpdate();
 }
 
@@ -216,55 +230,65 @@ TOGGLE(mode,modeMenu,"Mode     ",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE("Manual",MODE_MANUAL,selectManual,Menu::noEvent)
 );
 
-SELECT(btnAMode,bntAModeMenu,"Seq A   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE("4",BTN_MODE_4,configUpdate,Menu::noEvent)
-  ,VALUE("2",BTN_MODE_2,configUpdate,Menu::noEvent)
-  ,VALUE("1",BTN_MODE_1,configUpdate,Menu::noEvent)
-  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,Menu::noEvent)
-  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,Menu::noEvent)
-  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,Menu::noEvent)
+SELECT(seqAPtr,bntAModeMenu,"S1",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_A_B_C_D_100,&sequence_a_b_c_d_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_D_C_B_A_100,&sequence_d_c_b_a_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
 );
 
-SELECT(btnBMode,bntBModeMenu,"Seq B   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE("4",BTN_MODE_4,configUpdate,Menu::noEvent)
-  ,VALUE("2",BTN_MODE_2,configUpdate,Menu::noEvent)
-  ,VALUE("1",BTN_MODE_1,configUpdate,Menu::noEvent)
-  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,Menu::noEvent)
-  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,Menu::noEvent)
-  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,Menu::noEvent)
+SELECT(seqBPtr,bntBModeMenu,"S2",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_A_B_C_D_100,&sequence_a_b_c_d_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_D_C_B_A_100,&sequence_d_c_b_a_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
 );
 
-SELECT(btnCMode,bntCModeMenu,"Seq C   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE("4",BTN_MODE_4,configUpdate,Menu::noEvent)
-  ,VALUE("2",BTN_MODE_2,configUpdate,Menu::noEvent)
-  ,VALUE("1",BTN_MODE_1,configUpdate,Menu::noEvent)
-  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,Menu::noEvent)
-  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,Menu::noEvent)
-  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,Menu::noEvent)
+SELECT(seqCPtr,bntCModeMenu,"S3",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_A_B_C_D_100,&sequence_a_b_c_d_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_D_C_B_A_100,&sequence_d_c_b_a_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
 );
 
-SELECT(btnDMode,bntDModeMenu,"Seq D   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE("4",BTN_MODE_4,configUpdate,Menu::noEvent)
-  ,VALUE("2",BTN_MODE_2,configUpdate,Menu::noEvent)
-  ,VALUE("1",BTN_MODE_1,configUpdate,Menu::noEvent)
-  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,Menu::noEvent)
-  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,Menu::noEvent)
-  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,Menu::noEvent)
+SELECT(seqDPtr,bntDModeMenu,"S4",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_A_B_C_D_100,&sequence_a_b_c_d_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_D_C_B_A_100,&sequence_d_c_b_a_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
 );
 
-SELECT(btnEMode,bntEModeMenu,"Seq E   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE("4",BTN_MODE_4,configUpdate,Menu::noEvent)
-  ,VALUE("2",BTN_MODE_2,configUpdate,Menu::noEvent)
-  ,VALUE("1",BTN_MODE_1,configUpdate,Menu::noEvent)
-  ,VALUE("1/2",BTN_MODE_1_2,configUpdate,Menu::noEvent)
-  ,VALUE("1/4",BTN_MODE_1_4,configUpdate,Menu::noEvent)
-  ,VALUE("DNB",BTN_MODE_DNB,configUpdate,Menu::noEvent)
+SELECT(seqEPtr,bntEModeMenu,"S5",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_A_B_C_D_100,&sequence_a_b_c_d_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_D_C_B_A_100,&sequence_d_c_b_a_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
 );
 
 MENU(mainMenu,"   SYNFERNO",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,FIELD(duration,"Duration","",1,23,1,0,configUpdate,Menu::exitEvent,Menu::noStyle)
+  ,FIELD(duration,"Duration","",1,23,1,0,onDurationMenuUpdate,Menu::exitEvent,Menu::noStyle)
   ,FIELD(offset,"Offset  ","",0,23,1,0,configUpdate,Menu::exitEvent,Menu::wrapStyle)
-  ,FIELD(bpm,"BPM     ","",0.0,300.0,1.0,0.1,editBPM,Menu::exitEvent,Menu::noStyle)
+  ,FIELD(bpm,"BPM     ","",0.0,300.0,1.0,0.1,onBPMMenuUpdate,Menu::exitEvent,Menu::noStyle)
   ,SUBMENU(modeMenu)
   ,SUBMENU(bntAModeMenu)
   ,SUBMENU(bntBModeMenu)
@@ -278,6 +302,7 @@ MENU(mainMenu,"   SYNFERNO",Menu::doNothing,Menu::noEvent,Menu::noStyle
 result selectMidi() {
   // Disable manual BPM setting
   mainMenu[2].enabled=disabledStatus;
+  fireMarshal.clear();
   return configUpdate();
 }
 
@@ -286,8 +311,9 @@ result selectManual() {
   mainMenu[2].enabled=enabledStatus;
   manualBeat.resetCounter();
   if (bpm == 0.0) {
-    bpm = 120.0;
+    setBpm(120.0);
   }
+  fireMarshal.clear();
   return configUpdate();
 }
 
@@ -310,13 +336,7 @@ NAVROOT(nav,mainMenu,MAX_DEPTH,encStream,out);
 // Local variables
 long inNum = 0;
 char inCommand;
-int btnMode;
-boolean beatSaysFire = false;
-boolean lastBeatSaysFire = false;
-boolean beatFireA = false;
-boolean beatFireB = false;
-boolean beatFireC = false;
-boolean beatFireD = false;
+struct Sequence *activeSequence;
 
 void setup() {
   Serial.begin(115200);
@@ -338,6 +358,12 @@ void setup() {
   */
   u8x8.setFont(u8x8_font_artossans8_r);
 
+  // load up the sequences
+  Sequences::init();
+
+  // this sequence is not actually active, but this way updates to the "current sequence" don't attempt to set null values
+  activeSequence = seqAPtr;
+
   // configure Menu
   nav.showTitle=false;
   mainMenu[2].enabled=disabledStatus;
@@ -353,20 +379,19 @@ void setup() {
 
   // buttons
   // make fire now
-  bigRedButton.begin(BTN_BIG_RED_BUTTON_PIN);
-  fireAllNow.begin(BTN_FIRE_2_PIN);
+  fireAllNow.begin(BTN_FIRE_ALL_PIN);
   fireANow.begin(BTN_FIRE_0_PIN);
   analogWrite(LED_FIRE_0_PIN, BRIGHTNESS_DIM_RED);
   pinMode(LED_FIRE_0_PIN, OUTPUT);
   fireBNow.begin(BTN_FIRE_1_PIN);
   analogWrite(LED_FIRE_1_PIN, BRIGHTNESS_DIM_RED);
   pinMode(LED_FIRE_1_PIN, OUTPUT);
-  fireCNow.begin(BTN_FIRE_3_PIN);
+  fireCNow.begin(BTN_FIRE_2_PIN);
+  analogWrite(LED_FIRE_2_PIN, BRIGHTNESS_DIM_RED);
+  pinMode(LED_FIRE_2_PIN, OUTPUT);
+  fireDNow.begin(BTN_FIRE_3_PIN);
   analogWrite(LED_FIRE_3_PIN, BRIGHTNESS_DIM_RED);
   pinMode(LED_FIRE_3_PIN, OUTPUT);
-  fireDNow.begin(BTN_FIRE_4_PIN);
-  analogWrite(LED_FIRE_4_PIN, BRIGHTNESS_DIM_RED);
-  pinMode(LED_FIRE_4_PIN, OUTPUT);
   // reset midi counter to zero
   zero.begin(BTN_ZERO_PIN);
   analogWrite(LED_ZERO_PIN, BRIGHTNESS_DIM_YELLOW);
@@ -377,7 +402,10 @@ void setup() {
   pinMode(LED_TAP_PIN, OUTPUT);
   manualBeat.setBPM(bpm);
   // sequences of poofs
-  sequence.begin(NUM_SEQUENCE_BUTTONS, SEQUENCE_BUTTON_PINS, SEQUENCE_LED_PINS);
+  sequenceButtons.begin(NUM_SEQUENCE_BUTTONS, SEQUENCE_BUTTON_PINS, SEQUENCE_LED_PINS);
+
+  // fire up the fire marshal
+  fireMarshal.setDuration(duration);
 }
 
 void loop() {
@@ -417,23 +445,28 @@ void loop() {
   }
 
   // 3. handle sequence selection button group
-  if ( sequence.update() && sequence.hasSelection() ) {
-    switch (sequence.getValue()) {
-      case 0:
-        btnMode = btnAMode;
-        break;
-      case 1:
-        btnMode = btnBMode;
-        break;
-      case 2:
-        btnMode = btnCMode;
-        break;
-      case 3:
-        btnMode = btnDMode;
-        break;
-      case 4:
-        btnMode = btnEMode;
-        break;
+  if ( sequenceButtons.update() ) {
+    if ( !sequenceButtons.hasSelection() ) {
+      fireMarshal.clear();
+    } else {
+      switch (sequenceButtons.getValue()) {
+        case 0:
+          activeSequence = seqAPtr;
+          break;
+        case 1:
+          activeSequence = seqBPtr;
+          break;
+        case 2:
+          activeSequence = seqCPtr;
+          break;
+        case 3:
+          activeSequence = seqDPtr;
+          break;
+        case 4:
+          activeSequence = seqEPtr;
+          break;
+      }
+      updateSequenceDegredation();
     }
   }
   
@@ -449,61 +482,65 @@ void loop() {
   // 5. handle beat
   // if we have no beat (manual or MIDI), shut it down.
   if (getClockCounter()==255) {
-    beatSaysFire = false;
+    fireMarshal.clear();
   }
   // if we have a clock tick, update the firing status and beat indicators.
   if( updateClockCounter() ) {
     handleBeat();
   }
 
-  // 6. handle poofers
-  // Turn the poofers on or off, depending on beat and buttons.
-  // update the state of the fire-now buttons
-  bigRedButton.update();
+  // 6. Handle poofers.
+  // provide the fire marshal with the most up-to-date button and counter states
   fireAllNow.update();
   fireANow.update();
   fireBNow.update();
   fireCNow.update();
   fireDNow.update();
-  // if any of the relevant states of buttons or clicks indicate that
-  // it's time to fire, ensure the poofer is lit.  Otherwise, ensure
-  // that it is extinguished.
-  if (bigRedButton.getState() || fireAllNow.getState() || fireANow.getState() || beatFireA) {
+  fireMarshal.setManualAll(fireAllNow.getState());
+  fireMarshal.setManualA(fireANow.getState());
+  fireMarshal.setManualB(fireBNow.getState());
+  fireMarshal.setManualC(fireCNow.getState());
+  fireMarshal.setManualD(fireDNow.getState());
+  // process all the states and determine firing status
+  fireMarshal.update();
+  // actually turn the poofers on or off, based on the determination of the fire marshal
+  if (fireMarshal.getFireStateA()) {
     if (!fireA.getState()) {
-      fireA.on();
+        fireA.on();
     }
   } else {
-    if (fireA.getState()) {
-      fireA.off();
-    }
+      if (fireA.getState()) {
+          fireA.off();
+      }
   }
-  if (bigRedButton.getState() || fireAllNow.getState() || fireBNow.getState() || beatFireB) {
-    if (!fireB.getState()) {
-      fireB.on();
-    }
+  if (fireMarshal.getFireStateB()) {
+      if (!fireB.getState()) {
+          fireB.on();
+      }
   } else {
-    if (fireB.getState()) {
-      fireB.off();
-    }
+      if (fireB.getState()) {
+          fireB.off();
+      }
   }
-  if (bigRedButton.getState() || fireAllNow.getState() || fireCNow.getState() || beatFireC) {
-    if (!fireC.getState()) {
-      fireC.on();
-    }
+  if (fireMarshal.getFireStateC()) {
+      if (!fireC.getState()) {
+          fireC.on();
+      }
   } else {
-    if (fireC.getState()) {
-      fireC.off();
-    }
+      if (fireC.getState()) {
+          fireC.off();
+      }
   }
-  if (bigRedButton.getState() || fireAllNow.getState() || fireDNow.getState() || beatFireD) {
-    if (!fireD.getState()) {
-      fireD.on();
-    }
+  if (fireMarshal.getFireStateD()) {
+      if (!fireD.getState()) {
+          fireD.on();
+      }
   } else {
-    if (fireD.getState()) {
-      fireD.off();
-    }
+      if (fireD.getState()) {
+          fireD.off();
+      }
   }
+        
   
   // 7. handle fire indicators
   // Report changes in firing status (change in solenoid state) by lighting the fire-now buttons.
@@ -514,10 +551,10 @@ void loop() {
     togglePWMLED(fireB.getState(), LED_FIRE_1_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
   }
   if ( fireC.update() ) {
-    togglePWMLED(fireC.getState(), LED_FIRE_3_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
+    togglePWMLED(fireC.getState(), LED_FIRE_2_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
   }
   if ( fireD.update() ) {
-    togglePWMLED(fireD.getState(), LED_FIRE_4_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
+    togglePWMLED(fireD.getState(), LED_FIRE_3_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
   }
 
   // MISC. code for debugging, reporting, etc. to the Serial line
@@ -541,11 +578,25 @@ boolean updateClockCounter() {
   boolean hasMidiUpdate = midi.update();
   boolean hasManualUpdate = manualBeat.update();
   if (mode == MODE_MIDI) {
-    bpm = midi.getBPM();
+    setBpm(midi.getBPM());
     return hasMidiUpdate;
   } else {
     return hasManualUpdate;
   }
+}
+
+void setBpm(float val) {
+  // set the new global value
+  bpm = val;
+  if (bpm > 0) {
+    // update sequence priority support level
+    updateSequenceDegredation();
+  }
+}
+
+// determine what priority level we can support for the given bpm, duration, and sequence.
+void updateSequenceDegredation() {
+  activeSequence->updateViablePriority(minimumTicksBetweenLargePoofTrigger());
 }
 
 // determine firing time and display beat information.
@@ -561,139 +612,15 @@ void handleBeat() {
   }
 
   // how far back from the beat do we need to trigger each poofer?
-  if (!sequence.hasSelection()) {
-    beatFireA = false;
-    beatFireB = false;
-    beatFireC = false;
-    beatFireD = false;
-  } else {
-    switch (btnMode) {
-      case BTN_MODE_4:
-        setFireStates4_4(counter, CLOCK_TICKS_PER_BEAT * 4);
-        break;
-      case BTN_MODE_2:
-        setFireStates4_4(counter, CLOCK_TICKS_PER_BEAT * 2);
-        break;
-      case BTN_MODE_1:
-        setFireStates4_4(counter, CLOCK_TICKS_PER_BEAT);
-        break;
-      case BTN_MODE_1_2:
-        setFireStates4_4(counter, CLOCK_TICKS_PER_BEAT / 2);
-        break;
-      case BTN_MODE_1_4:
-        setFireStates4_4(counter, CLOCK_TICKS_PER_BEAT / 4);
-        break;
-      case BTN_MODE_DNB:
-        setFireStatesDnb(counter);
-        break;
-    }
+  if (!sequenceButtons.hasSelection()) {
+    fireMarshal.clear();
+  } else { 
+    TickTriggers triggers = activeSequence->getTickTriggers(counter + offset);
+    // Serial << F("tick triggers: A ") << triggers.poofSizeA << F(" B ") << triggers.poofSizeB << F(" C ") << triggers.poofSizeC << F(" D ") << triggers.poofSizeD << endl;
+    fireMarshal.setSequenceTriggers(triggers.poofSizeA, triggers.poofSizeB, triggers.poofSizeC, triggers.poofSizeD);
   }
-}
 
-// Set each fire state based on a 4/4 beat
-void setFireStates4_4(byte counter, int clocksPerTrigger) {
-  byte fireAOnAt;
-  byte fireBOnAt;
-  byte fireCOnAt;
-  byte fireDOnAt;
-  byte modifiedClocksPerTrigger = clocksPerTrigger;
-  // if the triggers are coming too often, spread them out
-  if (!tooFastForPoofers(clocksPerTrigger)) {
-    // 1 group
-    fireAOnAt = (clocksPerTrigger - offset) % clocksPerTrigger;
-    fireBOnAt = (clocksPerTrigger - offset) % clocksPerTrigger;
-    fireCOnAt = (clocksPerTrigger - offset) % clocksPerTrigger;
-    fireDOnAt = (clocksPerTrigger - offset) % clocksPerTrigger;
-  } else if (!tooFastForPoofers(clocksPerTrigger*2)) {
-    // 2 groups; double the ticks-per-trigger window and offset half of the poofers by 1/2 ticks
-    modifiedClocksPerTrigger = clocksPerTrigger * 2;
-
-    fireAOnAt = (modifiedClocksPerTrigger - offset + clocksPerTrigger) % modifiedClocksPerTrigger;
-    fireBOnAt = (modifiedClocksPerTrigger - offset) % modifiedClocksPerTrigger;
-    fireCOnAt = (modifiedClocksPerTrigger - offset) % modifiedClocksPerTrigger;
-    fireDOnAt = (modifiedClocksPerTrigger - offset + clocksPerTrigger) % modifiedClocksPerTrigger;
-  } else {
-    // 4 groups; quadruple the ticks-per-trigger window and offset each of the poofers by 1/4 ticks
-    modifiedClocksPerTrigger = clocksPerTrigger * 4;
-
-    fireAOnAt = (modifiedClocksPerTrigger - offset + clocksPerTrigger) % modifiedClocksPerTrigger;
-    fireBOnAt = (modifiedClocksPerTrigger - offset + (3 * clocksPerTrigger)) % modifiedClocksPerTrigger;
-    fireCOnAt = (modifiedClocksPerTrigger - offset) % modifiedClocksPerTrigger;
-    fireDOnAt = (modifiedClocksPerTrigger - offset + (2 * clocksPerTrigger)) % modifiedClocksPerTrigger;
-  }
-  
-  // and when do we need to turn them off?
-  byte fireAOffAt = (fireAOnAt + duration) % modifiedClocksPerTrigger;
-  byte fireBOffAt = (fireBOnAt + duration) % modifiedClocksPerTrigger;
-  byte fireCOffAt = (fireCOnAt + duration) % modifiedClocksPerTrigger;
-  byte fireDOffAt = (fireDOnAt + duration) % modifiedClocksPerTrigger;
-  
-  // given the current counter and on/off times, should we shoot fire or not?
-  beatFireA = timeForFire( counter % modifiedClocksPerTrigger, fireAOnAt, fireAOffAt );
-  beatFireB = timeForFire( counter % modifiedClocksPerTrigger, fireBOnAt, fireBOffAt );
-  beatFireC = timeForFire( counter % modifiedClocksPerTrigger, fireCOnAt, fireCOffAt );
-  beatFireD = timeForFire( counter % modifiedClocksPerTrigger, fireDOnAt, fireDOffAt );
-}
-
-void setFireStatesDnb(byte counter) {
-  beatFireA = false;
-  beatFireB = false;
-  beatFireC = false;
-  beatFireD = false;
-
-  switch (counter) {
-    case 0:
-    case 1:
-    case 2:
-    case 3:
-    case 4:
-    case 5:
-    case 6:
-    case 7:
-    case 8:
-    case 9:
-    case 10:
-    case 11:
-    case 12:
-    case 13:
-    case 14:
-    case 15:
-    case 16:
-    case 17:
-      beatFireB = true;
-      beatFireC = true;
-      break;
-    case 23:
-    case 24:
-    case 25:
-    case 26:
-    case 27:
-    case 28:
-    case 29:
-      beatFireA = true;
-      beatFireD = true;
-      break;
-    case 61:
-    case 62:
-    case 63:
-    case 64:
-    case 65:
-    case 66:
-    case 67:
-      beatFireB = true;
-      beatFireC = true;
-      break;
-    case 76:
-    case 77:
-    case 78:
-    case 79:
-    case 80:
-    case 81:
-    case 82:
-      beatFireA = true;
-      beatFireD = true;
-      break;
-  }
+  fireMarshal.tickBeatCounter();
 }
 
 // helper function to work through the modulo-24 stuff.  PITA.
@@ -714,13 +641,25 @@ boolean timeForFire( byte clock, byte start, byte stop ) {
   
 }
 
-// Given the bpm and duration, will this small of a ticksPerTrigger result
-// in more triggers than the poofers can handle.
-boolean tooFastForPoofers(byte ticksPerTrigger) {
+/*
+  Compute the number of ticks required to perform a large poof.
+
+  The minimum ticks between triggers is
+  ceil(millisPerTrigger / millisPerTick)
+
+  millisPerTrigger is (duration * millisPerTick) + lockout window
+
+  Fully expanded, minimum ticks between triggers would be:
+  duration * ((MILLIS_PER_MINUTE / bpm) / CLOCK_TICKS_PER_BEAT) + 200UL
+                                /
+        ((MILLIS_PER_MINUTE / bpm) / CLOCK_TICKS_PER_BEAT)
+  
+ */
+uint8_t minimumTicksBetweenLargePoofTrigger() {
   int millisPerBeat = MILLIS_PER_MINUTE / bpm;
   int millisPerTick = millisPerBeat / CLOCK_TICKS_PER_BEAT;
-  int durationMillis = millisPerTick * duration;
-  return millisPerTick * ticksPerTrigger < durationMillis + 200UL;
+
+  return ceil(duration + (200UL / millisPerTick));
 }
 
 // brighten or dim an LED based on a state
@@ -786,7 +725,7 @@ void handleTap() {
   microsPerBeat = (microsPerBeat*(smoothDelta-1) + deltaTap)/smoothDelta;
 
   if (taps >= TAPS_BEFORE_WRITE) {
-    bpm = MICROS_PER_MINUTE * 1.0 / microsPerBeat;
+    setBpm(MICROS_PER_MINUTE * 1.0 / microsPerBeat);
     manualBeat.setBPM(bpm);
   }
 }
@@ -805,6 +744,7 @@ byte getClockCounter() {
 }
 
 void handleWebserverUpdates() {
+  return;
   while (Serial1.available() > 0) {
     int inChar = Serial1.read();
     Serial << (char)inChar;
@@ -825,7 +765,7 @@ void handleWebserverUpdates() {
           Serial << F("duration: ") << inNum << endl;
           break;
         case 'B':
-          bpm = inNum;
+          setBpm(inNum);
           Serial << F("bpm: ") << inNum << endl;
           break;
         case 'M':

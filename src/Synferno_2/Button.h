@@ -10,10 +10,11 @@ class Button{
 
     boolean update();
 
-    byte getState();
+    boolean getState();
     
   private:
-    byte pressedValue, currentState, pin;
+    byte pressedValue, pin;
+    boolean currentState;
 };
 
 #endif
