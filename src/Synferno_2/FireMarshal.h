@@ -9,8 +9,8 @@
 // and turns the solenoids on and off.
 class FireMarshal {
     public: 
-        // tick the clock counter and determine new poofer firing states
-        void tick();
+        // determine new poofer firing states
+        void update();
 
         boolean getFireStateA();
         boolean getFireStateB();
@@ -24,6 +24,7 @@ class FireMarshal {
         void setManualC(boolean pressed);
         void setManualD(boolean pressed);
         void setSequenceTriggers(poof_duration sizeA, poof_duration sizeB, poof_duration sizeC, poof_duration sizeD);
+        void tickBeatCounter();
 
     private:
 

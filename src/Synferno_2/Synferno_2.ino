@@ -18,8 +18,8 @@
 // A10 to Rotary Encoder `DT`
 // 2 to Pushbutton Fire 0 `LED`
 // 3 to Pushbutton Fire 1 `LED`
-// 4 to Pushbutton Fire 3 `LED`
-// 5 to Pushbutton Fire 4 `LED`
+// 4 to Pushbutton Fire 2 `LED`
+// 5 to Pushbutton Fire 3 `LED`
 // 6 to Pushbutton Zero `LED`
 // 7 to Pushbutton Freq 0 `LED`
 // 8 to Pushbutton Freq 1 `LED`
@@ -47,12 +47,19 @@
 // 33 to Pushbutton Freq 4 `signal`
 // 34 to Pushbutton Fire 0 `signal`
 // 35 to Pushbutton Fire 1 `signal`
-// 36 to Pushbutton Fire 2 `signal`
-// 37 to Pushbutton Fire 3 `signal`
-// 38 to Pushbutton Fire 4 `signal`
+// 36 to Pushbutton Fire All `signal`
+// 37 to Pushbutton Fire 2 `signal`
+// 38 to Pushbutton Fire 3 `signal`
 // 39 to Pushbutton Zero `signal`
 // 40 to Pushbutton Tap `signal`
+
+// Is this actually necessary?
+// The mega should be getting its power from the 12v through the barrel jack
+// and all the 5v components should be powered from the buck converter.
+// This would be taking the regulated +5 on the mega and piping it into
+// the `+5` rail, and we probably don't want other components pulling off the mega for power.
 // VCC to Buck Converter `+5`
+
 // GND to GND
 
 // WEMOS LOLIN D1 mini (ESP8266)
@@ -134,15 +141,15 @@ Solenoid fireA, fireB, fireC, fireD;
 #define BRIGHTNESS_DIM_YELLOW 30
 #define BTN_FIRE_0_PIN 34
 #define BTN_FIRE_1_PIN 35
-#define BTN_FIRE_2_PIN 36
-#define BTN_FIRE_3_PIN 37
-#define BTN_FIRE_4_PIN 38
+#define BTN_FIRE_2_PIN 37
+#define BTN_FIRE_3_PIN 38
+#define BTN_FIRE_ALL_PIN 36
 #define BTN_ZERO_PIN 39
 #define BTN_TAP_PIN 40
 #define LED_FIRE_0_PIN 2
 #define LED_FIRE_1_PIN 3
-#define LED_FIRE_3_PIN 4
-#define LED_FIRE_4_PIN 5
+#define LED_FIRE_2_PIN 4
+#define LED_FIRE_3_PIN 5
 #define LED_ZERO_PIN 6
 #define LED_TAP_PIN 12
 Button fireAllNow;
@@ -218,7 +225,7 @@ result configUpdate() {
 }
 result onBPMMenuUpdate() {
   manualBeat.setBPM(bpm);
-  updateSequenceDegredation();
+  setBpm(bpm);
   return configUpdate();
 }
 
@@ -331,6 +338,9 @@ void setup() {
 
   // load up the sequences
   Sequences::init();
+
+  // this sequence is not actually active, but this way updates to the "current sequence" don't attempt to set null values
+  activeSequence = seqAPtr;
   Serial.println(sequence100.title);
   Serial.println(sequence050.title);
 
@@ -349,19 +359,19 @@ void setup() {
 
   // buttons
   // make fire now
-  fireAllNow.begin(BTN_FIRE_2_PIN);
+  fireAllNow.begin(BTN_FIRE_ALL_PIN);
   fireANow.begin(BTN_FIRE_0_PIN);
   analogWrite(LED_FIRE_0_PIN, BRIGHTNESS_DIM_RED);
   pinMode(LED_FIRE_0_PIN, OUTPUT);
   fireBNow.begin(BTN_FIRE_1_PIN);
   analogWrite(LED_FIRE_1_PIN, BRIGHTNESS_DIM_RED);
   pinMode(LED_FIRE_1_PIN, OUTPUT);
-  fireCNow.begin(BTN_FIRE_3_PIN);
+  fireCNow.begin(BTN_FIRE_2_PIN);
+  analogWrite(LED_FIRE_2_PIN, BRIGHTNESS_DIM_RED);
+  pinMode(LED_FIRE_2_PIN, OUTPUT);
+  fireDNow.begin(BTN_FIRE_3_PIN);
   analogWrite(LED_FIRE_3_PIN, BRIGHTNESS_DIM_RED);
   pinMode(LED_FIRE_3_PIN, OUTPUT);
-  fireDNow.begin(BTN_FIRE_4_PIN);
-  analogWrite(LED_FIRE_4_PIN, BRIGHTNESS_DIM_RED);
-  pinMode(LED_FIRE_4_PIN, OUTPUT);
   // reset midi counter to zero
   zero.begin(BTN_ZERO_PIN);
   analogWrite(LED_ZERO_PIN, BRIGHTNESS_DIM_YELLOW);
@@ -456,7 +466,7 @@ void loop() {
   }
 
   // 6. Handle poofers.
-  // provide the fire marshal with the most up-to-date button states
+  // provide the fire marshal with the most up-to-date button and counter states
   fireAllNow.update();
   fireANow.update();
   fireBNow.update();
@@ -467,8 +477,8 @@ void loop() {
   fireMarshal.setManualB(fireBNow.getState());
   fireMarshal.setManualC(fireCNow.getState());
   fireMarshal.setManualD(fireDNow.getState());
-  // instruct fire marshal to process one clock tick, determining new poofer states
-  fireMarshal.tick();
+  // process all the states and determine firing status
+  fireMarshal.update();
   // actually turn the poofers on or off, based on the determination of the fire marshal
   if (fireMarshal.getFireStateA()) {
     if (!fireA.getState()) {
@@ -517,10 +527,10 @@ void loop() {
     togglePWMLED(fireB.getState(), LED_FIRE_1_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
   }
   if ( fireC.update() ) {
-    togglePWMLED(fireC.getState(), LED_FIRE_3_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
+    togglePWMLED(fireC.getState(), LED_FIRE_2_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
   }
   if ( fireD.update() ) {
-    togglePWMLED(fireD.getState(), LED_FIRE_4_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
+    togglePWMLED(fireD.getState(), LED_FIRE_3_PIN, BRIGHTNESS_BRIGHT_RED, BRIGHTNESS_DIM_RED);
   }
 
   // MISC. code for debugging, reporting, etc. to the Serial line
@@ -581,10 +591,12 @@ void handleBeat() {
   if (!sequenceButtons.hasSelection()) {
     fireMarshal.setSequenceTriggers(DURATION_NONE, DURATION_NONE, DURATION_NONE, DURATION_NONE);
   } else { 
-    TickTriggers triggers = activeSequence->getTickTriggers((counter + offset) % CLOCK_TICKS_PER_BEAT);
+    TickTriggers triggers = activeSequence->getTickTriggers(counter + offset);
     // Serial << F("tick triggers: A ") << triggers.poofSizeA << F(" B ") << triggers.poofSizeB << F(" C ") << triggers.poofSizeC << F(" D ") << triggers.poofSizeD << endl;
     fireMarshal.setSequenceTriggers(triggers.poofSizeA, triggers.poofSizeB, triggers.poofSizeC, triggers.poofSizeD);
   }
+
+  fireMarshal.tickBeatCounter();
 }
 
 // helper function to work through the modulo-24 stuff.  PITA.
@@ -624,16 +636,6 @@ uint8_t minimumTicksBetweenLargePoofTrigger() {
   int millisPerTick = millisPerBeat / CLOCK_TICKS_PER_BEAT;
 
   return ceil(duration + (200UL / millisPerTick));
-}
-
-
-// Given the bpm and duration, will this small of a ticksPerTrigger result
-// in more triggers than the poofers can handle.
-boolean tooFastForPoofers(byte ticksPerTrigger) {
-  int millisPerBeat = MILLIS_PER_MINUTE / bpm;
-  int millisPerTick = millisPerBeat / CLOCK_TICKS_PER_BEAT;
-  int durationMillis = millisPerTick * duration;
-  return millisPerTick * ticksPerTrigger < durationMillis + 200UL;
 }
 
 // brighten or dim an LED based on a state

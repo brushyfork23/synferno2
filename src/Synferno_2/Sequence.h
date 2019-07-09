@@ -6,12 +6,15 @@
 
 #define MAX_TICKS 96 // 24 ticks per beat, 4 beats per stanza
 
-#define PRIORITY_NO 0
-#define PRIORITY_LOW 1
-#define PRIORITY_MEDIUM 2
-#define PRIORITY_HIGH 3
-#define PRIORITY_HIGHEST 4
-#define N_PRIORITIES 5
+enum trigger_priority : uint8_t {
+  PRIORITY_NO = 0,
+  PRIORITY_LOW,
+  PRIORITY_MEDIUM,
+  PRIORITY_HIGH,
+  PRIORITY_HIGHEST,
+
+  N_PRIORITIES
+};
 
 enum poof_duration : uint8_t {
   DURATION_NONE,
@@ -27,7 +30,7 @@ struct TickTriggers {
 };
 
 struct ChannelData {
-  uint8_t priority;
+  trigger_priority priority;
   poof_duration duration;
 };
 
@@ -50,11 +53,13 @@ class Sequence {
     TickTriggers getTickTriggers(uint8_t tickIndex);
 
   private:
-    virtual void populate() = 0;
-
-    int curPriority = PRIORITY_NO;
-    
+    uint8_t curPriority = PRIORITY_NO;
     uint8_t minTicksForPriority[N_PRIORITIES];
+    
+    virtual void populateTickData() = 0;
+    void populateMinimumRequirementsForTriggers();
+
+    
 };
 
 #endif

@@ -10,36 +10,36 @@ class Sequence_100 : public Sequence {
   struct TickData tick72;
     
   public: 
-    void populate() {
+    void populateTickData() {
         strcpy(this->title, "100");
 
         tick0.channel[0].priority = PRIORITY_LOW;
         tick0.channel[0].duration = DURATION_LARGE;
-        tick0.channel[1].priority = PRIORITY_HIGH;
+        tick0.channel[1].priority = PRIORITY_MEDIUM;
         tick0.channel[1].duration = DURATION_LARGE;
-        tick0.channel[2].priority = PRIORITY_HIGHEST;
+        tick0.channel[2].priority = PRIORITY_HIGH;
         tick0.channel[2].duration = DURATION_LARGE;
         tick0.channel[3].priority = PRIORITY_LOW;
         tick0.channel[3].duration = DURATION_LARGE;
         this->ticks[0] = &tick0;
         
-        tick24.channel[0].priority = PRIORITY_LOW;
+        tick24.channel[0].priority = PRIORITY_MEDIUM;
         tick24.channel[0].duration = DURATION_LARGE;
-        tick24.channel[1].priority = PRIORITY_HIGHEST;
+        tick24.channel[1].priority = PRIORITY_LOW;
         tick24.channel[1].duration = DURATION_LARGE;
-        tick24.channel[2].priority = PRIORITY_HIGH;
+        tick24.channel[2].priority = PRIORITY_LOW;
         tick24.channel[2].duration = DURATION_LARGE;
-        tick24.channel[3].priority = PRIORITY_LOW;
+        tick24.channel[3].priority = PRIORITY_HIGH;
         tick24.channel[3].duration = DURATION_LARGE;
         this->ticks[24] = &tick24;
         
-        tick48.channel[0].priority = PRIORITY_HIGHEST;
+        tick48.channel[0].priority = PRIORITY_LOW;
         tick48.channel[0].duration = DURATION_LARGE;
-        tick48.channel[1].priority = PRIORITY_LOW;
+        tick48.channel[1].priority = PRIORITY_HIGH;
         tick48.channel[1].duration = DURATION_LARGE;
-        tick48.channel[2].priority = PRIORITY_LOW;
+        tick48.channel[2].priority = PRIORITY_MEDIUM;
         tick48.channel[2].duration = DURATION_LARGE;
-        tick48.channel[3].priority = PRIORITY_HIGH;
+        tick48.channel[3].priority = PRIORITY_LOW;
         tick48.channel[3].duration = DURATION_LARGE;
         this->ticks[48] = &tick48;
         
@@ -49,7 +49,7 @@ class Sequence_100 : public Sequence {
         tick72.channel[1].duration = DURATION_LARGE;
         tick72.channel[2].priority = PRIORITY_LOW;
         tick72.channel[2].duration = DURATION_LARGE;
-        tick72.channel[3].priority = PRIORITY_HIGHEST;
+        tick72.channel[3].priority = PRIORITY_MEDIUM;
         tick72.channel[3].duration = DURATION_LARGE;
         this->ticks[72] = &tick72;
     }
