@@ -12,6 +12,8 @@ class FireMarshal {
         // determine new poofer firing states
         void update();
 
+        void clear();
+        
         boolean getFireStateA();
         boolean getFireStateB();
         boolean getFireStateC();

@@ -1,5 +1,16 @@
 #include "fireMarshal.h"
 
+void FireMarshal::clear() {
+    this->sequenceSizeA = 0;
+    this->sequenceSizeB = 0;
+    this->sequenceSizeC = 0;
+    this->sequenceSizeD = 0;
+    this->ticksLeftToFireA = 0;
+    this->ticksLeftToFireB = 0;
+    this->ticksLeftToFireC = 0;
+    this->ticksLeftToFireD = 0;
+}
+
 void FireMarshal::update() {
     if (this->sequenceSizeA == DURATION_LARGE) this->ticksLeftToFireA = this->largePoofTicks;
     if (this->sequenceSizeB == DURATION_LARGE) this->ticksLeftToFireB = this->largePoofTicks;

@@ -1,15 +1,21 @@
 #include "sequences.h"
 
-Sequence_400 sequence400;
-Sequence_200 sequence200;
-Sequence_100 sequence100;
-Sequence_050 sequence050;
-Sequence_025 sequence025;
+Sequence_cbda_400 sequence_cbda_400;
+Sequence_cbda_200 sequence_cbda_200;
+Sequence_cbda_100 sequence_cbda_100;
+Sequence_cbda_050 sequence_cbda_050;
+Sequence_cbda_025 sequence_cbda_025;
+Sequence_a_b_c_d_100 sequence_a_b_c_d_100;
+Sequence_d_c_b_a_100 sequence_d_c_b_a_100;
+Sequence_dnb sequence_dnb;
 
 static void Sequences::init() {
-  sequence400.init();
-  sequence200.init();
-  sequence100.init();
-  sequence050.init();
-  sequence025.init();
+  sequence_cbda_400.init();
+  sequence_cbda_200.init();
+  sequence_cbda_100.init();
+  sequence_cbda_050.init();
+  sequence_cbda_025.init();
+  sequence_a_b_c_d_100.init();
+  sequence_d_c_b_a_100.init();
+  sequence_dnb.init();
 }

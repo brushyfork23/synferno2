@@ -2,13 +2,11 @@
 #define Sequence_h
 
 #include "Arduino.h"
-#include <Streaming.h>
 
 #define MAX_TICKS 96 // 24 ticks per beat, 4 beats per stanza
 
 enum trigger_priority : uint8_t {
-  PRIORITY_NO = 0,
-  PRIORITY_LOW,
+  PRIORITY_LOW = 0,
   PRIORITY_MEDIUM,
   PRIORITY_HIGH,
 
@@ -16,9 +14,17 @@ enum trigger_priority : uint8_t {
 };
 
 enum poof_duration : uint8_t {
-  DURATION_NONE,
+  DURATION_NONE = 0,
   DURATION_SMALL,
   DURATION_LARGE
+};
+
+struct PriorityTriggers {
+  struct TickData* ticks[MAX_TICKS];
+};
+
+struct TickData {
+  poof_duration channels[4];
 };
 
 struct TickTriggers {
@@ -28,19 +34,9 @@ struct TickTriggers {
   poof_duration poofSizeD;
 };
 
-struct ChannelData {
-  trigger_priority priority;
-  poof_duration duration;
-};
-
-struct TickData {
-  struct ChannelData channel[4];
-};
-
 class Sequence {
   public:
-    char title[10];
-    struct TickData* ticks[MAX_TICKS];
+    struct PriorityTriggers priorities[N_PRIORITIES];
 
     void init();
 
@@ -52,7 +48,7 @@ class Sequence {
     TickTriggers getTickTriggers(uint8_t tickIndex);
 
   private:
-    uint8_t curPriority = PRIORITY_NO;
+    uint8_t curPriority = PRIORITY_LOW;
     uint8_t minTicksForPriority[N_PRIORITIES];
     
     virtual void populateTickData() = 0;

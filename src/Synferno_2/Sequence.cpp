@@ -3,46 +3,51 @@
 void Sequence::init()
 {
     // When not initiazlized, sequences should do the least
-    for (uint8_t p=PRIORITY_NO; p<N_PRIORITIES; p++) {
+    for (uint8_t p=0; p<N_PRIORITIES; p++) {
         this->minTicksForPriority[p] = MAX_TICKS;
     }
-
+    
     this->populateTickData();
 
     this->populateMinimumRequirementsForTriggers();
 }
 
 void Sequence::populateMinimumRequirementsForTriggers() {
-    // calculate the minimum ticks between each trigger required
-    // to hit all triggers of priority higher-than-or-equal-to each priority level
     for (int p=PRIORITY_LOW; p<N_PRIORITIES; p++) {
-        for (int c=0; c<4; c++) {
-            int8_t lastTick = -1;
-            int8_t firstTick = -1; // use this to check the difference between after the last tick until the first tick, wrapping around
-            uint8_t minTicksForChannel = MAX_TICKS;
-            for (int i=0; i<MAX_TICKS; i++) {
-                // find the lowest tick difference 
-                if (this->ticks[i] && this->ticks[i]->channel[c].priority >= p) { // this tick has a trigger with the right priority
-                    if (firstTick < 0) {
-                        firstTick = i;
-                    } else {
-                        uint8_t ticksSinceLast = i - 1 - lastTick;
-                        if (minTicksForChannel > ticksSinceLast) { 
-                            minTicksForChannel = ticksSinceLast;
+        int8_t lastTickForChannel[4] = {-1,-1,-1,-1};
+        int8_t firstTickForChannel[4] = {-1,-1,-1,-1}; // use this to check the difference between after the last tick until the first tick, wrapping around
+        uint8_t minTicksRequiredForChannel[4] = {MAX_TICKS, MAX_TICKS, MAX_TICKS, MAX_TICKS};
+        for (int i=0; i<MAX_TICKS; i++) {
+            if (this->priorities[p].ticks[i]) {
+                for (int c=0; c<4; c++) {
+                    if (this->priorities[p].ticks[i]->channels[c] > DURATION_NONE) {
+                        if (firstTickForChannel[c] < 0) {
+                            firstTickForChannel[c] = i;
+                        } else {
+                            uint8_t ticksSinceLast = i - 1 - firstTickForChannel[c];
+                            if (minTicksRequiredForChannel[c] > ticksSinceLast) { 
+                                minTicksRequiredForChannel[c] = ticksSinceLast;
+                            }
                         }
+                        lastTickForChannel[c] = i;
                     }
-                    lastTick = i;
                 }
             }
-            // now that we've iterated over all ticks in this channel, additionally check the difference
-            // between the final tick and the first tick
-            uint8_t ticksFromLastToFirst = MAX_TICKS - 1 - lastTick + firstTick;
-            if (minTicksForChannel > ticksFromLastToFirst) {
-                minTicksForChannel = ticksFromLastToFirst;
-            }
+        }
 
-            if (this->minTicksForPriority[p] > minTicksForChannel) {
-                this->minTicksForPriority[p] = minTicksForChannel;
+        // now that we've iterated over all ticks, additionally check the difference
+        // between the final ticks and the first ticks for each channel
+        for (int c=0; c<4; c++) {
+            uint8_t ticksFromLastToFirst = MAX_TICKS - 1 - lastTickForChannel[c] + firstTickForChannel[c];
+            if (minTicksRequiredForChannel[c] > ticksFromLastToFirst) {
+                minTicksRequiredForChannel[c] = ticksFromLastToFirst;
+            }
+        }
+
+        // find the strictest requirement amongst all the channels
+        for (int c=0; c<4; c++) {
+            if (this->minTicksForPriority[p] > minTicksRequiredForChannel[c]) {
+                this->minTicksForPriority[p] = minTicksRequiredForChannel[c];
             }
         }
     }
@@ -66,19 +71,11 @@ TickTriggers Sequence::getTickTriggers(uint8_t tickIndex) {
     poof_duration triggerB = DURATION_NONE;
     poof_duration triggerC = DURATION_NONE;
     poof_duration triggerD = DURATION_NONE;
-    if (this->ticks[tickIndex]) {
-        if (this->ticks[tickIndex]->channel[0].priority >= curPriority) {
-            triggerA = this->ticks[tickIndex]->channel[0].duration;
-        }
-        if (this->ticks[tickIndex]->channel[1].priority >= curPriority) {
-            triggerB = this->ticks[tickIndex]->channel[1].duration;
-        }
-        if (this->ticks[tickIndex]->channel[2].priority >= curPriority) {
-            triggerC = this->ticks[tickIndex]->channel[2].duration;
-        }
-        if (this->ticks[tickIndex]->channel[3].priority >= curPriority) {
-            triggerD = this->ticks[tickIndex]->channel[3].duration;
-        }
+    if (this->priorities[curPriority].ticks[tickIndex]) {
+        triggerA = this->priorities[curPriority].ticks[tickIndex]->channels[0];
+        triggerB = this->priorities[curPriority].ticks[tickIndex]->channels[1];
+        triggerC = this->priorities[curPriority].ticks[tickIndex]->channels[2];
+        triggerD = this->priorities[curPriority].ticks[tickIndex]->channels[3];
     }
 
     return TickTriggers {
