@@ -195,7 +195,8 @@ U8X8_SSD1309_128X64_NONAME0_4W_SW_SPI u8x8(SCL, SDA, OLED_CS, OLED_DC, OLED_RST)
 #define MODE_MIDI 0
 #define MODE_MANUAL 1
 boolean hasConfigChange = false;
-int duration=7; // Number of clock ticks per beat to fire
+int longDuration=7; // Number of clock ticks per beat to fire for a big poof
+int shortDuration=4; // Number of clock ticks per beat to fire for a little poof
 float bpm=120.0;
 int offset=0; // Number of clock ticks early to trigger the next beat
 int mode=MODE_MIDI;
@@ -219,8 +220,14 @@ result onBPMMenuUpdate() {
   return configUpdate();
 }
 
-result onDurationMenuUpdate() {
-  fireMarshal.setDuration(duration);
+result onLongDurationMenuUpdate() {
+  fireMarshal.setLongDuration(longDuration);
+  updateSequenceDegredation();
+  return configUpdate();
+}
+
+result onShortDurationMenuUpdate() {
+  fireMarshal.setShortDuration(shortDuration);
   updateSequenceDegredation();
   return configUpdate();
 }
@@ -286,7 +293,8 @@ SELECT(seqEPtr,bntEModeMenu,"S5",Menu::doNothing,Menu::noEvent,Menu::noStyle
 );
 
 MENU(mainMenu,"   SYNFERNO",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,FIELD(duration,"Duration","",1,23,1,0,onDurationMenuUpdate,Menu::exitEvent,Menu::noStyle)
+  ,FIELD(longDuration,"Big poof","",1,23,1,0,onLongDurationMenuUpdate,Menu::exitEvent,Menu::noStyle)
+  ,FIELD(shortDuration,"Lil poof","",1,23,1,0,onShortDurationMenuUpdate,Menu::exitEvent,Menu::noStyle)
   ,FIELD(offset,"Offset  ","",0,23,1,0,configUpdate,Menu::exitEvent,Menu::wrapStyle)
   ,FIELD(bpm,"BPM     ","",0.0,300.0,1.0,0.1,onBPMMenuUpdate,Menu::exitEvent,Menu::noStyle)
   ,SUBMENU(modeMenu)
@@ -405,7 +413,8 @@ void setup() {
   sequenceButtons.begin(NUM_SEQUENCE_BUTTONS, SEQUENCE_BUTTON_PINS, SEQUENCE_LED_PINS);
 
   // fire up the fire marshal
-  fireMarshal.setDuration(duration);
+  fireMarshal.setLongDuration(longDuration);
+  fireMarshal.setShortDuration(shortDuration);
 }
 
 void loop() {
@@ -425,14 +434,7 @@ void loop() {
   // send updates
   if (hasConfigChange) {
     hasConfigChange = false;
-    Serial1.print('O');
-    Serial1.println(offset);
-    Serial1.print('D');
-    Serial1.println(duration);
-    Serial1.print('B');
-    Serial1.println(bpm);
-    Serial1.print('M');
-    Serial1.println(mode);
+    sendToWebserver();
   }
   // fetch updates
   handleWebserverUpdates();
@@ -596,7 +598,7 @@ void setBpm(float val) {
 
 // determine what priority level we can support for the given bpm, duration, and sequence.
 void updateSequenceDegredation() {
-  activeSequence->updateViablePriority(minimumTicksBetweenLargePoofTrigger());
+  activeSequence->updateViablePriority(minimumTicksBetweenLongPoofTrigger(), minimumTicksBetweenShortPoofTrigger());
 }
 
 // determine firing time and display beat information.
@@ -616,7 +618,6 @@ void handleBeat() {
     fireMarshal.clear();
   } else { 
     TickTriggers triggers = activeSequence->getTickTriggers(counter + offset);
-    // Serial << F("tick triggers: A ") << triggers.poofSizeA << F(" B ") << triggers.poofSizeB << F(" C ") << triggers.poofSizeC << F(" D ") << triggers.poofSizeD << endl;
     fireMarshal.setSequenceTriggers(triggers.poofSizeA, triggers.poofSizeB, triggers.poofSizeC, triggers.poofSizeD);
   }
 
@@ -655,11 +656,19 @@ boolean timeForFire( byte clock, byte start, byte stop ) {
         ((MILLIS_PER_MINUTE / bpm) / CLOCK_TICKS_PER_BEAT)
   
  */
-uint8_t minimumTicksBetweenLargePoofTrigger() {
+uint8_t minimumTicksBetweenLongPoofTrigger() {
   int millisPerBeat = MILLIS_PER_MINUTE / bpm;
   int millisPerTick = millisPerBeat / CLOCK_TICKS_PER_BEAT;
 
-  return ceil(duration + (200UL / millisPerTick));
+  return ceil(longDuration + (200UL / millisPerTick));
+}
+
+// Compute the number of ticks required to perform a small poof.
+uint8_t minimumTicksBetweenShortPoofTrigger() {
+  int millisPerBeat = MILLIS_PER_MINUTE / bpm;
+  int millisPerTick = millisPerBeat / CLOCK_TICKS_PER_BEAT;
+
+  return ceil(shortDuration + (200UL / millisPerTick));
 }
 
 // brighten or dim an LED based on a state
@@ -743,6 +752,20 @@ byte getClockCounter() {
   }
 }
 
+// TODO
+void sendToWebserver() {
+  return;
+  Serial1.print('O');
+  Serial1.println(offset);
+  Serial1.print('D');
+  Serial1.println(longDuration);
+  Serial1.print('B');
+  Serial1.println(bpm);
+  Serial1.print('M');
+  Serial1.println(mode);
+}
+
+// TODO
 void handleWebserverUpdates() {
   return;
   while (Serial1.available() > 0) {
@@ -761,8 +784,8 @@ void handleWebserverUpdates() {
           Serial << F("offset: ") << inNum << endl;
           break;
         case 'D':
-          duration = inNum;
-          Serial << F("duration: ") << inNum << endl;
+          longDuration = inNum;
+          Serial << F("longDuration: ") << inNum << endl;
           break;
         case 'B':
           setBpm(inNum);
