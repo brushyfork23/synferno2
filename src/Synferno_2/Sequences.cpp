@@ -5,8 +5,8 @@ Sequence_cbda_200 sequence_cbda_200;
 Sequence_cbda_100 sequence_cbda_100;
 Sequence_cbda_050 sequence_cbda_050;
 Sequence_cbda_025 sequence_cbda_025;
-Sequence_a_b_c_d_100 sequence_a_b_c_d_100;
-Sequence_d_c_b_a_100 sequence_d_c_b_a_100;
+Sequence_a_b_c_d_050 sequence_a_b_c_d_050;
+Sequence_d_c_b_a_050 sequence_d_c_b_a_050;
 Sequence_dnb sequence_dnb;
 
 static void Sequences::init() {
@@ -15,7 +15,7 @@ static void Sequences::init() {
   sequence_cbda_100.init();
   sequence_cbda_050.init();
   sequence_cbda_025.init();
-  sequence_a_b_c_d_100.init();
-  sequence_d_c_b_a_100.init();
+  sequence_a_b_c_d_050.init();
+  sequence_d_c_b_a_050.init();
   sequence_dnb.init();
 }

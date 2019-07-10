@@ -8,8 +8,8 @@
 #include "sequences/cbda_100.h"
 #include "sequences/cbda_050.h"
 #include "sequences/cbda_025.h"
-#include "sequences/a_b_c_d_100.h"
-#include "sequences/d_c_b_a_100.h"
+#include "sequences/a_b_c_d_050.h"
+#include "sequences/d_c_b_a_050.h"
 #include "sequences/dnb.h"
 
 class Sequences {

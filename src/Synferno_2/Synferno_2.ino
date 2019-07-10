@@ -237,66 +237,66 @@ TOGGLE(mode,modeMenu,"Mode     ",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE("Manual",MODE_MANUAL,selectManual,Menu::noEvent)
 );
 
-SELECT(seqAPtr,bntAModeMenu,"S1",Menu::doNothing,Menu::noEvent,Menu::noStyle
+SELECT(seqAPtr,bntAModeMenu,"Seq1",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_A_B_C_D_100,&sequence_a_b_c_d_100,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_D_C_B_A_100,&sequence_d_c_b_a_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
 );
 
-SELECT(seqBPtr,bntBModeMenu,"S2",Menu::doNothing,Menu::noEvent,Menu::noStyle
+SELECT(seqBPtr,bntBModeMenu,"Seq2",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_A_B_C_D_100,&sequence_a_b_c_d_100,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_D_C_B_A_100,&sequence_d_c_b_a_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
 );
 
-SELECT(seqCPtr,bntCModeMenu,"S3",Menu::doNothing,Menu::noEvent,Menu::noStyle
+SELECT(seqCPtr,bntCModeMenu,"Seq3",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_A_B_C_D_100,&sequence_a_b_c_d_100,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_D_C_B_A_100,&sequence_d_c_b_a_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
 );
 
-SELECT(seqDPtr,bntDModeMenu,"S4",Menu::doNothing,Menu::noEvent,Menu::noStyle
+SELECT(seqDPtr,bntDModeMenu,"Seq4",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_A_B_C_D_100,&sequence_a_b_c_d_100,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_D_C_B_A_100,&sequence_d_c_b_a_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
 );
 
-SELECT(seqEPtr,bntEModeMenu,"S5",Menu::doNothing,Menu::noEvent,Menu::noStyle
+SELECT(seqEPtr,bntEModeMenu,"Seq5",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_A_B_C_D_100,&sequence_a_b_c_d_100,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_D_C_B_A_100,&sequence_d_c_b_a_100,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,configUpdate,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
 );
 
 MENU(mainMenu,"   SYNFERNO",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,FIELD(bpm,"BPM     ","",0.0,300.0,1.0,0.1,onBPMMenuUpdate,Menu::exitEvent,Menu::noStyle)
+  ,FIELD(offset,"Offset  ","",0,23,1,0,configUpdate,Menu::exitEvent,Menu::wrapStyle)
   ,FIELD(longDuration,"Big poof","",1,23,1,0,onLongDurationMenuUpdate,Menu::exitEvent,Menu::noStyle)
   ,FIELD(shortDuration,"Lil poof","",1,23,1,0,onShortDurationMenuUpdate,Menu::exitEvent,Menu::noStyle)
-  ,FIELD(offset,"Offset  ","",0,23,1,0,configUpdate,Menu::exitEvent,Menu::wrapStyle)
-  ,FIELD(bpm,"BPM     ","",0.0,300.0,1.0,0.1,onBPMMenuUpdate,Menu::exitEvent,Menu::noStyle)
   ,SUBMENU(modeMenu)
   ,SUBMENU(bntAModeMenu)
   ,SUBMENU(bntBModeMenu)
@@ -617,7 +617,7 @@ void handleBeat() {
   if (!sequenceButtons.hasSelection()) {
     fireMarshal.clear();
   } else { 
-    TickTriggers triggers = activeSequence->getTickTriggers(counter + offset);
+    TickTriggers triggers = activeSequence->getTickTriggers((counter + offset) % (CLOCK_TICKS_PER_BEAT * SCALE));
     fireMarshal.setSequenceTriggers(triggers.poofSizeA, triggers.poofSizeB, triggers.poofSizeC, triggers.poofSizeD);
   }
 

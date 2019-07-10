@@ -14,15 +14,15 @@ void Sequence::init()
 }
 
 void Sequence::populateMinimumRequirementsForTriggers() {
-    for (int p=PRIORITY_LOW; p<N_PRIORITIES; p++) {
+    for (uint8_t p=PRIORITY_LOW; p<N_PRIORITIES; p++) {
         int8_t lastTickForChannel[4] = {-1,-1,-1,-1};
         int8_t firstTickForChannel[4] = {-1,-1,-1,-1}; // use this to check the difference between after the last tick until the first tick, wrapping around
         poof_duration lastTickSizeForChannel[4] = {DURATION_NONE,DURATION_NONE,DURATION_NONE,DURATION_NONE};
         uint8_t minTicksRequiredForLongPoofForChannel[4] = {MAX_TICKS, MAX_TICKS, MAX_TICKS, MAX_TICKS};
         uint8_t minTicksRequiredForShortPoofForChannel[4] = {MAX_TICKS, MAX_TICKS, MAX_TICKS, MAX_TICKS};
-        for (int i=0; i<MAX_TICKS; i++) {
+        for (uint8_t i=0; i<MAX_TICKS; i++) {
             if (this->priorities[p].ticks[i]) {
-                for (int c=0; c<4; c++) {
+                for (uint8_t c=0; c<4; c++) {
                     if (this->priorities[p].ticks[i]->channels[c] > DURATION_NONE) {
                         if (firstTickForChannel[c] < 0) {
                             firstTickForChannel[c] = i;
@@ -47,7 +47,7 @@ void Sequence::populateMinimumRequirementsForTriggers() {
 
         // now that we've iterated over all ticks, additionally check the difference
         // between the final ticks and the first ticks for each channel
-        for (int c=0; c<4; c++) {
+        for (uint8_t c=0; c<4; c++) {
             uint8_t ticksFromLastToFirst = MAX_TICKS - 1 - lastTickForChannel[c] + firstTickForChannel[c];
             if (lastTickSizeForChannel[c] == DURATION_LONG && minTicksRequiredForLongPoofForChannel[c] > ticksFromLastToFirst) {
                 minTicksRequiredForLongPoofForChannel[c] = ticksFromLastToFirst;
@@ -57,7 +57,7 @@ void Sequence::populateMinimumRequirementsForTriggers() {
         }
 
         // find the strictest requirement amongst all the channels
-        for (int c=0; c<4; c++) {
+        for (uint8_t c=0; c<4; c++) {
             if (this->ticksRequiredForAllLongPoofs[p] > minTicksRequiredForLongPoofForChannel[c]) {
                 this->ticksRequiredForAllLongPoofs[p] = minTicksRequiredForLongPoofForChannel[c];
             }
