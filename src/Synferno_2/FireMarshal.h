@@ -13,13 +13,14 @@ class FireMarshal {
         void update();
 
         void clear();
-        
+
         boolean getFireStateA();
         boolean getFireStateB();
         boolean getFireStateC();
         boolean getFireStateD();
 
-        void setDuration(uint8_t ticksPerPoof);
+        void setLongDuration(uint8_t ticksPerPoof);
+        void setShortDuration(uint8_t ticksPerPoof);
         void setManualAll(boolean pressed);
         void setManualA(boolean pressed);
         void setManualB(boolean pressed);
@@ -34,7 +35,7 @@ class FireMarshal {
         boolean manualAll, manualA, manualB, manualC, manualD,
             fireStateA, fireStateB, fireStateC, fireStateD;
         poof_duration sequenceSizeA, sequenceSizeB, sequenceSizeC, sequenceSizeD;
-        uint8_t largePoofTicks,
+        uint8_t longPoofTicks, shortPoofTicks,
             ticksLeftToFireA, ticksLeftToFireB, ticksLeftToFireC, ticksLeftToFireD;
 };
 

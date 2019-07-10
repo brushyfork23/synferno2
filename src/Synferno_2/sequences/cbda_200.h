@@ -13,16 +13,16 @@ class Sequence_cbda_200 : public Sequence {
   public: 
     void populateTickData() {
       // init repeated tick values
-      trigger_all.channels[0] = DURATION_LARGE;
-      trigger_all.channels[1] = DURATION_LARGE;
-      trigger_all.channels[2] = DURATION_LARGE;
-      trigger_all.channels[3] = DURATION_LARGE;
+      trigger_all.channels[0] = DURATION_LONG;
+      trigger_all.channels[1] = DURATION_LONG;
+      trigger_all.channels[2] = DURATION_LONG;
+      trigger_all.channels[3] = DURATION_LONG;
 
-      trigger_ad.channels[0] = DURATION_LARGE;
-      trigger_ad.channels[3] = DURATION_LARGE;
+      trigger_ad.channels[0] = DURATION_LONG;
+      trigger_ad.channels[3] = DURATION_LONG;
 
-      trigger_bc.channels[1] = DURATION_LARGE;
-      trigger_bc.channels[2] = DURATION_LARGE;
+      trigger_bc.channels[1] = DURATION_LONG;
+      trigger_bc.channels[2] = DURATION_LONG;
 
       // MEDIUM
       uint8_t p = PRIORITY_MEDIUM;

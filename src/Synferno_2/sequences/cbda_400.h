@@ -11,10 +11,10 @@ class Sequence_cbda_400 : public Sequence {
   public: 
     void populateTickData() {
       // init repeated tick values
-      trigger_all.channels[0] = DURATION_LARGE;
-      trigger_all.channels[1] = DURATION_LARGE;
-      trigger_all.channels[2] = DURATION_LARGE;
-      trigger_all.channels[3] = DURATION_LARGE;
+      trigger_all.channels[0] = DURATION_LONG;
+      trigger_all.channels[1] = DURATION_LONG;
+      trigger_all.channels[2] = DURATION_LONG;
+      trigger_all.channels[3] = DURATION_LONG;
 
       // LOW
       this->priorities[PRIORITY_LOW].ticks[0] = &trigger_all;

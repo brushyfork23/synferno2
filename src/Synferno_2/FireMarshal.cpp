@@ -12,10 +12,26 @@ void FireMarshal::clear() {
 }
 
 void FireMarshal::update() {
-    if (this->sequenceSizeA == DURATION_LARGE) this->ticksLeftToFireA = this->largePoofTicks;
-    if (this->sequenceSizeB == DURATION_LARGE) this->ticksLeftToFireB = this->largePoofTicks;
-    if (this->sequenceSizeC == DURATION_LARGE) this->ticksLeftToFireC = this->largePoofTicks;
-    if (this->sequenceSizeD == DURATION_LARGE) this->ticksLeftToFireD = this->largePoofTicks;
+    if (this->sequenceSizeA == DURATION_LONG) {
+        this->ticksLeftToFireA = this->longPoofTicks;
+    } else if (this->sequenceSizeA == DURATION_SHORT) {
+         this->ticksLeftToFireA = this->shortPoofTicks;
+    }
+    if (this->sequenceSizeB == DURATION_LONG) {
+        this->ticksLeftToFireB = this->longPoofTicks;
+    } else if (this->sequenceSizeB == DURATION_SHORT) {
+         this->ticksLeftToFireB = this->shortPoofTicks;
+    }
+    if (this->sequenceSizeC == DURATION_LONG) {
+        this->ticksLeftToFireC = this->longPoofTicks;
+    } else if (this->sequenceSizeC == DURATION_SHORT) {
+         this->ticksLeftToFireC = this->shortPoofTicks;
+    }
+    if (this->sequenceSizeD == DURATION_LONG) {
+        this->ticksLeftToFireD = this->longPoofTicks;
+    } else if (this->sequenceSizeD == DURATION_SHORT) {
+         this->ticksLeftToFireD = this->shortPoofTicks;
+    }
 
     this->fireStateA = this->manualAll || this->manualA || this->ticksLeftToFireA > 0;
     this->fireStateB = this->manualAll || this->manualB || this->ticksLeftToFireB > 0;
@@ -54,8 +70,12 @@ boolean FireMarshal::getFireStateD() {
     return this->manualAll || this->manualD || ticksLeftToFireD > 0;
 }
 
-void FireMarshal::setDuration(uint8_t ticksPerPoof) {
-    this->largePoofTicks = ticksPerPoof;
+void FireMarshal::setLongDuration(uint8_t ticksPerPoof) {
+    this->longPoofTicks = ticksPerPoof;
+}
+
+void FireMarshal::setShortDuration(uint8_t ticksPerPoof) {
+    this->shortPoofTicks = ticksPerPoof;
 }
 
 void FireMarshal::setManualAll(boolean pressed) {

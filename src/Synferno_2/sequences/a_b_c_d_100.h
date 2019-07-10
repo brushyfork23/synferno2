@@ -14,10 +14,10 @@ class Sequence_a_b_c_d_100 : public Sequence {
   public: 
     void populateTickData() {
       // init repeated tick values
-      trigger_a.channels[0] = DURATION_LARGE;
-      trigger_b.channels[1] = DURATION_LARGE;
-      trigger_c.channels[2] = DURATION_LARGE;
-      trigger_d.channels[3] = DURATION_LARGE;
+      trigger_a.channels[0] = DURATION_LONG;
+      trigger_b.channels[1] = DURATION_LONG;
+      trigger_c.channels[2] = DURATION_LONG;
+      trigger_d.channels[3] = DURATION_LONG;
 
       // LOW
       this->priorities[PRIORITY_LOW].ticks[0] = &trigger_a;

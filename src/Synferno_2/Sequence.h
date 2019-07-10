@@ -15,8 +15,8 @@ enum trigger_priority : uint8_t {
 
 enum poof_duration : uint8_t {
   DURATION_NONE = 0,
-  DURATION_SMALL,
-  DURATION_LARGE
+  DURATION_SHORT,
+  DURATION_LONG
 };
 
 struct PriorityTriggers {
@@ -42,14 +42,15 @@ class Sequence {
 
     // given the minimum ticks required to trigger a large poof, computed from the current bpm and the duration size,
     // set the priority we are capable of rendering
-    void updateViablePriority(uint8_t ticksRequiredForLargePoof);
+    void updateViablePriority(uint8_t ticksPerLongPoof, uint8_t ticksPerShortPoof);
 
     // Should we fire now?
     TickTriggers getTickTriggers(uint8_t tickIndex);
 
   private:
     uint8_t curPriority = PRIORITY_LOW;
-    uint8_t minTicksForPriority[N_PRIORITIES];
+    uint8_t ticksRequiredForAllLongPoofs[N_PRIORITIES];
+    uint8_t ticksRequiredForAllShortPoofs[N_PRIORITIES];
     
     virtual void populateTickData() = 0;
     void populateMinimumRequirementsForTriggers();
