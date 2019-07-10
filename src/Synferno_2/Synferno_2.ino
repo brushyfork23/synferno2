@@ -170,6 +170,7 @@ ButtonGroup sequenceButtons;
 
 // Sequences
 #include "sequences.h";
+struct Sequence *activeSequence;
 
 // Fire Marshal
 #include "FireMarshal.h"
@@ -200,7 +201,14 @@ int shortDuration=4; // Number of clock ticks per beat to fire for a little poof
 float bpm=120.0;
 int offset=0; // Number of clock ticks early to trigger the next beat
 int mode=MODE_MIDI;
-
+enum priorityRangeMenuOption : uint8_t {
+  PRIORITY_RANGE_ANY = 0,
+  PRIORITY_RANGE_GT_LOW,
+  PRIORITY_RANGE_LOW,
+  PRIORITY_RANGE_MEDIUM,
+  PRIORITY_RANGE_HIGH
+};
+uint8_t priorityRangeSelection=PRIORITY_RANGE_ANY;
 
 struct Sequence *seqAPtr = &sequence_cbda_400;
 struct Sequence *seqBPtr = &sequence_cbda_200;
@@ -232,12 +240,41 @@ result onShortDurationMenuUpdate() {
   return configUpdate();
 }
 
+result onPriorityRangeMenuUpdate() {
+  switch(priorityRangeSelection) {
+    case PRIORITY_RANGE_ANY:
+      activeSequence->setPriorityRange(PRIORITY_LOW, PRIORITY_HIGH);
+      break;
+    case PRIORITY_RANGE_GT_LOW:
+      activeSequence->setPriorityRange(PRIORITY_MEDIUM, PRIORITY_HIGH);
+      break;
+    case PRIORITY_RANGE_LOW:
+      activeSequence->setPriorityRange(PRIORITY_LOW, PRIORITY_LOW);
+      break;
+    case PRIORITY_RANGE_MEDIUM:
+      activeSequence->setPriorityRange(PRIORITY_MEDIUM, PRIORITY_MEDIUM);
+      break;
+    case PRIORITY_RANGE_HIGH:
+      activeSequence->setPriorityRange(PRIORITY_HIGH, PRIORITY_HIGH);
+      break;
+  }
+  return configUpdate();
+}
+
 TOGGLE(mode,modeMenu,"Mode     ",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE("Midi",MODE_MIDI,selectMidi,Menu::noEvent)
   ,VALUE("Manual",MODE_MANUAL,selectManual,Menu::noEvent)
 );
 
-SELECT(seqAPtr,bntAModeMenu,"Seq1",Menu::doNothing,Menu::noEvent,Menu::noStyle
+SELECT(priorityRangeSelection,priorityRangeMenu,"Pri    ",onPriorityRangeMenuUpdate,Menu::exitEvent,Menu::noStyle
+  ,VALUE("Any",PRIORITY_RANGE_ANY,Menu::doNothing,Menu::noEvent)
+  ,VALUE(">= Med",PRIORITY_RANGE_GT_LOW,Menu::doNothing,Menu::noEvent)
+  ,VALUE("Low",PRIORITY_RANGE_LOW,Menu::doNothing,Menu::noEvent)
+  ,VALUE("Medium",PRIORITY_RANGE_MEDIUM,Menu::doNothing,Menu::noEvent)
+  ,VALUE("High",PRIORITY_RANGE_HIGH,Menu::doNothing,Menu::noEvent)
+);
+
+SELECT(seqAPtr,seqAMenu,"Seq1",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
@@ -248,7 +285,7 @@ SELECT(seqAPtr,bntAModeMenu,"Seq1",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
 );
 
-SELECT(seqBPtr,bntBModeMenu,"Seq2",Menu::doNothing,Menu::noEvent,Menu::noStyle
+SELECT(seqBPtr,seqBMenu,"Seq2",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
@@ -259,7 +296,7 @@ SELECT(seqBPtr,bntBModeMenu,"Seq2",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
 );
 
-SELECT(seqCPtr,bntCModeMenu,"Seq3",Menu::doNothing,Menu::noEvent,Menu::noStyle
+SELECT(seqCPtr,seqCMenu,"Seq3",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
@@ -270,7 +307,7 @@ SELECT(seqCPtr,bntCModeMenu,"Seq3",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
 );
 
-SELECT(seqDPtr,bntDModeMenu,"Seq4",Menu::doNothing,Menu::noEvent,Menu::noStyle
+SELECT(seqDPtr,seqDMenu,"Seq4",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
@@ -281,7 +318,7 @@ SELECT(seqDPtr,bntDModeMenu,"Seq4",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
 );
 
-SELECT(seqEPtr,bntEModeMenu,"Seq5",Menu::doNothing,Menu::noEvent,Menu::noStyle
+SELECT(seqEPtr,seqEMenu,"Seq5",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
@@ -297,12 +334,13 @@ MENU(mainMenu,"   SYNFERNO",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,FIELD(offset,"Offset  ","",0,23,1,0,configUpdate,Menu::exitEvent,Menu::wrapStyle)
   ,FIELD(longDuration,"Big poof","",1,23,1,0,onLongDurationMenuUpdate,Menu::exitEvent,Menu::noStyle)
   ,FIELD(shortDuration,"Lil poof","",1,23,1,0,onShortDurationMenuUpdate,Menu::exitEvent,Menu::noStyle)
+  ,SUBMENU(priorityRangeMenu)
   ,SUBMENU(modeMenu)
-  ,SUBMENU(bntAModeMenu)
-  ,SUBMENU(bntBModeMenu)
-  ,SUBMENU(bntCModeMenu)
-  ,SUBMENU(bntDModeMenu)
-  ,SUBMENU(bntEModeMenu)
+  ,SUBMENU(seqAMenu)
+  ,SUBMENU(seqBMenu)
+  ,SUBMENU(seqCMenu)
+  ,SUBMENU(seqDMenu)
+  ,SUBMENU(seqEMenu)
 );
 
 #define MAX_DEPTH 2
@@ -344,7 +382,6 @@ NAVROOT(nav,mainMenu,MAX_DEPTH,encStream,out);
 // Local variables
 long inNum = 0;
 char inCommand;
-struct Sequence *activeSequence;
 
 void setup() {
   Serial.begin(115200);

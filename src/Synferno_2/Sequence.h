@@ -44,11 +44,15 @@ class Sequence {
     // set the priority we are capable of rendering
     void updateViablePriority(uint8_t ticksPerLongPoof, uint8_t ticksPerShortPoof);
 
+    // force the sequence to render a certain range of priorities
+    void setPriorityRange(trigger_priority min, trigger_priority max);
+
     // Should we fire now?
     TickTriggers getTickTriggers(uint8_t tickIndex);
 
   private:
-    uint8_t curPriority = PRIORITY_LOW;
+    uint8_t minViablePriority = PRIORITY_LOW;
+    trigger_priority priorityRangeMin = PRIORITY_LOW, priorityRangeMax = PRIORITY_HIGH;
     uint8_t ticksRequiredForAllLongPoofs[N_PRIORITIES];
     uint8_t ticksRequiredForAllShortPoofs[N_PRIORITIES];
     

@@ -71,15 +71,15 @@ void Sequence::populateMinimumRequirementsForTriggers() {
 // given the ticks available between triggers, computed from the current bpm and the duration size,
 // set the priority we are capable of rendering
 void Sequence::updateViablePriority(uint8_t ticksPerLongPoof, uint8_t ticksPerShortPoof) {
-    curPriority = PRIORITY_LOW;
+    minViablePriority = PRIORITY_LOW;
     while (
-        curPriority < PRIORITY_HIGH
+        minViablePriority < PRIORITY_HIGH
         && (
-            this->ticksRequiredForAllLongPoofs[curPriority] < ticksPerLongPoof
-            || this->ticksRequiredForAllShortPoofs[curPriority] < ticksPerShortPoof
+            this->ticksRequiredForAllLongPoofs[minViablePriority] < ticksPerLongPoof
+            || this->ticksRequiredForAllShortPoofs[minViablePriority] < ticksPerShortPoof
         )
     ) {
-        curPriority++;
+        minViablePriority++;
     }
 }
 
@@ -89,11 +89,20 @@ TickTriggers Sequence::getTickTriggers(uint8_t tickIndex) {
     poof_duration triggerB = DURATION_NONE;
     poof_duration triggerC = DURATION_NONE;
     poof_duration triggerD = DURATION_NONE;
-    if (this->priorities[curPriority].ticks[tickIndex]) {
-        triggerA = this->priorities[curPriority].ticks[tickIndex]->channels[0];
-        triggerB = this->priorities[curPriority].ticks[tickIndex]->channels[1];
-        triggerC = this->priorities[curPriority].ticks[tickIndex]->channels[2];
-        triggerD = this->priorities[curPriority].ticks[tickIndex]->channels[3];
+
+    trigger_priority p = minViablePriority;
+    if (this->priorityRangeMin > minViablePriority) {
+        minViablePriority = this->priorityRangeMin;
+    }
+    if (this->priorityRangeMax < minViablePriority) {
+        minViablePriority = this->priorityRangeMax;
+    }
+
+    if (this->priorities[minViablePriority].ticks[tickIndex]) {
+        triggerA = this->priorities[minViablePriority].ticks[tickIndex]->channels[0];
+        triggerB = this->priorities[minViablePriority].ticks[tickIndex]->channels[1];
+        triggerC = this->priorities[minViablePriority].ticks[tickIndex]->channels[2];
+        triggerD = this->priorities[minViablePriority].ticks[tickIndex]->channels[3];
     }
 
     return TickTriggers {
@@ -102,4 +111,9 @@ TickTriggers Sequence::getTickTriggers(uint8_t tickIndex) {
         triggerC,
         triggerD
     };
+}
+
+void Sequence::setPriorityRange(trigger_priority min, trigger_priority max) {
+    this->priorityRangeMin = min;
+    this->priorityRangeMax = max;
 }
