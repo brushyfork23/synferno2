@@ -27,6 +27,8 @@ struct TickData {
   poof_duration channels[4];
 };
 
+
+
 struct TickTriggers {
   poof_duration poofSizeA;
   poof_duration poofSizeB;
@@ -44,11 +46,8 @@ class Sequence {
     // set the priority we are capable of rendering
     void updateViablePriority(uint8_t ticksPerLongPoof, uint8_t ticksPerShortPoof);
 
-    // force the sequence to render a certain range of priorities
-    void setPriorityRange(trigger_priority min, trigger_priority max);
-
-    // Should we fire now?
-    TickTriggers getTickTriggers(uint8_t tickIndex);
+    // Should we fire now?  Get the triggers for the given tick, clamping them within a priority range.
+    TickTriggers getTickTriggers(uint8_t tickIndex, trigger_priority min, trigger_priority max);
 
   private:
     uint8_t minViablePriority = PRIORITY_LOW;
