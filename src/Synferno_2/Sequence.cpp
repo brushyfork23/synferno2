@@ -71,29 +71,38 @@ void Sequence::populateMinimumRequirementsForTriggers() {
 // given the ticks available between triggers, computed from the current bpm and the duration size,
 // set the priority we are capable of rendering
 void Sequence::updateViablePriority(uint8_t ticksPerLongPoof, uint8_t ticksPerShortPoof) {
-    curPriority = PRIORITY_LOW;
+    this->minViablePriority = PRIORITY_LOW;
     while (
-        curPriority < PRIORITY_HIGH
+        this->minViablePriority < PRIORITY_HIGH
         && (
-            this->ticksRequiredForAllLongPoofs[curPriority] < ticksPerLongPoof
-            || this->ticksRequiredForAllShortPoofs[curPriority] < ticksPerShortPoof
+            this->ticksRequiredForAllLongPoofs[this->minViablePriority] < ticksPerLongPoof
+            || this->ticksRequiredForAllShortPoofs[this->minViablePriority] < ticksPerShortPoof
         )
     ) {
-        curPriority++;
+        this->minViablePriority++;
     }
 }
 
 // Should we fire now?
-TickTriggers Sequence::getTickTriggers(uint8_t tickIndex) {
+TickTriggers Sequence::getTickTriggers(uint8_t tickIndex, trigger_priority min, trigger_priority max) {
     poof_duration triggerA = DURATION_NONE;
     poof_duration triggerB = DURATION_NONE;
     poof_duration triggerC = DURATION_NONE;
     poof_duration triggerD = DURATION_NONE;
-    if (this->priorities[curPriority].ticks[tickIndex]) {
-        triggerA = this->priorities[curPriority].ticks[tickIndex]->channels[0];
-        triggerB = this->priorities[curPriority].ticks[tickIndex]->channels[1];
-        triggerC = this->priorities[curPriority].ticks[tickIndex]->channels[2];
-        triggerD = this->priorities[curPriority].ticks[tickIndex]->channels[3];
+
+    trigger_priority p = this->minViablePriority;
+    if (min > p) {
+        p = min;
+    }
+    if (max < p) {
+        p = max;
+    }
+
+    if (this->priorities[p].ticks[tickIndex]) {
+        triggerA = this->priorities[p].ticks[tickIndex]->channels[0];
+        triggerB = this->priorities[p].ticks[tickIndex]->channels[1];
+        triggerC = this->priorities[p].ticks[tickIndex]->channels[2];
+        triggerD = this->priorities[p].ticks[tickIndex]->channels[3];
     }
 
     return TickTriggers {

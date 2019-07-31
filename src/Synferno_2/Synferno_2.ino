@@ -170,6 +170,7 @@ ButtonGroup sequenceButtons;
 
 // Sequences
 #include "sequences.h";
+struct Sequence *activeSequence;
 
 // Fire Marshal
 #include "FireMarshal.h"
@@ -200,7 +201,14 @@ int shortDuration=4; // Number of clock ticks per beat to fire for a little poof
 float bpm=120.0;
 int offset=0; // Number of clock ticks early to trigger the next beat
 int mode=MODE_MIDI;
-
+enum priorityRangeMenuOption : uint8_t {
+  PRIORITY_RANGE_ANY = 0,
+  PRIORITY_RANGE_GT_LOW,
+  PRIORITY_RANGE_LOW,
+  PRIORITY_RANGE_MEDIUM,
+  PRIORITY_RANGE_HIGH
+};
+uint8_t priorityRangeSelection=PRIORITY_RANGE_ANY;
 
 struct Sequence *seqAPtr = &sequence_cbda_400;
 struct Sequence *seqBPtr = &sequence_cbda_200;
@@ -237,59 +245,67 @@ TOGGLE(mode,modeMenu,"Mode     ",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE("Manual",MODE_MANUAL,selectManual,Menu::noEvent)
 );
 
-SELECT(seqAPtr,bntAModeMenu,"Seq1",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
+SELECT(priorityRangeSelection,priorityRangeMenu,"Pri    ",configUpdate,Menu::exitEvent,Menu::noStyle
+  ,VALUE("Any",PRIORITY_RANGE_ANY,Menu::doNothing,Menu::noEvent)
+  ,VALUE(">= Med",PRIORITY_RANGE_GT_LOW,Menu::doNothing,Menu::noEvent)
+  ,VALUE("Low",PRIORITY_RANGE_LOW,Menu::doNothing,Menu::noEvent)
+  ,VALUE("Medium",PRIORITY_RANGE_MEDIUM,Menu::doNothing,Menu::noEvent)
+  ,VALUE("High",PRIORITY_RANGE_HIGH,Menu::doNothing,Menu::noEvent)
 );
 
-SELECT(seqBPtr,bntBModeMenu,"Seq2",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
+SELECT(seqAPtr,seqAMenu,"Seq1",configUpdate,Menu::exitEvent,Menu::noStyle
+  ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,Menu::doNothing,Menu::noEvent)
 );
 
-SELECT(seqCPtr,bntCModeMenu,"Seq3",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
+SELECT(seqBPtr,seqBMenu,"Seq2",configUpdate,Menu::exitEvent,Menu::noStyle
+  ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,Menu::doNothing,Menu::noEvent)
 );
 
-SELECT(seqDPtr,bntDModeMenu,"Seq4",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
+SELECT(seqCPtr,seqCMenu,"Seq3",configUpdate,Menu::exitEvent,Menu::noStyle
+  ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,Menu::doNothing,Menu::noEvent)
 );
 
-SELECT(seqEPtr,bntEModeMenu,"Seq5",Menu::doNothing,Menu::noEvent,Menu::noStyle
-  ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,configUpdate,Menu::noEvent)
-  ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,configUpdate,Menu::noEvent)
+SELECT(seqDPtr,seqDMenu,"Seq4",configUpdate,Menu::exitEvent,Menu::noStyle
+  ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,Menu::doNothing,Menu::noEvent)
+);
+
+SELECT(seqEPtr,seqEMenu,"Seq5",configUpdate,Menu::exitEvent,Menu::noStyle
+  ,VALUE(SEQUENCE_TITLE_CBDA_400,&sequence_cbda_400,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_200,&sequence_cbda_200,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_100,&sequence_cbda_100,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_050,&sequence_cbda_050,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_CBDA_025,&sequence_cbda_025,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,Menu::doNothing,Menu::noEvent)
 );
 
 MENU(mainMenu,"   SYNFERNO",Menu::doNothing,Menu::noEvent,Menu::noStyle
@@ -297,26 +313,27 @@ MENU(mainMenu,"   SYNFERNO",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,FIELD(offset,"Offset  ","",0,23,1,0,configUpdate,Menu::exitEvent,Menu::wrapStyle)
   ,FIELD(longDuration,"Big poof","",1,23,1,0,onLongDurationMenuUpdate,Menu::exitEvent,Menu::noStyle)
   ,FIELD(shortDuration,"Lil poof","",1,23,1,0,onShortDurationMenuUpdate,Menu::exitEvent,Menu::noStyle)
+  ,SUBMENU(priorityRangeMenu)
   ,SUBMENU(modeMenu)
-  ,SUBMENU(bntAModeMenu)
-  ,SUBMENU(bntBModeMenu)
-  ,SUBMENU(bntCModeMenu)
-  ,SUBMENU(bntDModeMenu)
-  ,SUBMENU(bntEModeMenu)
+  ,SUBMENU(seqAMenu)
+  ,SUBMENU(seqBMenu)
+  ,SUBMENU(seqCMenu)
+  ,SUBMENU(seqDMenu)
+  ,SUBMENU(seqEMenu)
 );
 
 #define MAX_DEPTH 2
 
 result selectMidi() {
   // Disable manual BPM setting
-  mainMenu[2].enabled=disabledStatus;
+  mainMenu[0].enabled=disabledStatus;
   fireMarshal.clear();
   return configUpdate();
 }
 
 result selectManual() {
   // Enable manual BPM setting
-  mainMenu[2].enabled=enabledStatus;
+  mainMenu[0].enabled=enabledStatus;
   manualBeat.resetCounter();
   if (bpm == 0.0) {
     setBpm(120.0);
@@ -344,7 +361,6 @@ NAVROOT(nav,mainMenu,MAX_DEPTH,encStream,out);
 // Local variables
 long inNum = 0;
 char inCommand;
-struct Sequence *activeSequence;
 
 void setup() {
   Serial.begin(115200);
@@ -374,7 +390,7 @@ void setup() {
 
   // configure Menu
   nav.showTitle=false;
-  mainMenu[2].enabled=disabledStatus;
+  mainMenu[0].enabled=disabledStatus;
 
   // fire up MIDI
   midi.begin();
@@ -616,8 +632,31 @@ void handleBeat() {
   // how far back from the beat do we need to trigger each poofer?
   if (!sequenceButtons.hasSelection()) {
     fireMarshal.clear();
-  } else { 
-    TickTriggers triggers = activeSequence->getTickTriggers((counter + offset) % (CLOCK_TICKS_PER_BEAT * SCALE));
+  } else {
+    trigger_priority priorityMin, priorityMax;
+    switch(priorityRangeSelection) {
+      case PRIORITY_RANGE_ANY:
+        priorityMin = PRIORITY_LOW;
+        priorityMax = PRIORITY_HIGH;
+        break;
+      case PRIORITY_RANGE_GT_LOW:
+        priorityMin = PRIORITY_MEDIUM;
+        priorityMax = PRIORITY_HIGH;
+        break;
+      case PRIORITY_RANGE_LOW:
+        priorityMin = PRIORITY_LOW;
+        priorityMax = PRIORITY_LOW;
+        break;
+      case PRIORITY_RANGE_MEDIUM:
+        priorityMin = PRIORITY_MEDIUM;
+        priorityMax = PRIORITY_MEDIUM;
+        break;
+      case PRIORITY_RANGE_HIGH:
+        priorityMin = PRIORITY_HIGH;
+        priorityMax = PRIORITY_HIGH;
+        break;
+    }
+    TickTriggers triggers = activeSequence->getTickTriggers((counter + offset) % (CLOCK_TICKS_PER_BEAT * SCALE), priorityMin, priorityMax);
     fireMarshal.setSequenceTriggers(triggers.poofSizeA, triggers.poofSizeB, triggers.poofSizeC, triggers.poofSizeD);
   }
 
