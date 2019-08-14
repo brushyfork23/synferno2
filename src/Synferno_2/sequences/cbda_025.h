@@ -5,6 +5,22 @@
 
 #define SEQUENCE_TITLE_CBDA_025 "CBDA .25"
 
+class TickNode {
+  TickNode next;
+  uint8_t index;
+  TickData data;
+}
+class TickList {
+  TickNode head;
+
+//https://www.youtube.com/watch?v=njTh_OwMljA&list=PLX6IKgS15Ue02WDPRCmYKuZicQHit9kFt&index=13
+  public void append(TickData data) {
+    if (head) {
+
+    }
+  }
+}
+
 class Sequence_cbda_025 : public Sequence {
   struct TickData trigger_all;
   struct TickData trigger_a;
@@ -36,6 +52,15 @@ class Sequence_cbda_025 : public Sequence {
 
       // HIGH
       uint8_t p = PRIORITY_HIGH;
+
+      tick0 = new TickNode();
+      tick0.index = 0;
+      tick0.channels[0] = DURATION_LONG
+
+      tick6 = new 
+      tick0.channels[1] = DURATION_LONG
+
+      this->priorities[p].firstTick = 
       this->priorities[p].ticks[0] = &trigger_c;
       this->priorities[p].ticks[6] = &trigger_b;
       this->priorities[p].ticks[12] = &trigger_d;
