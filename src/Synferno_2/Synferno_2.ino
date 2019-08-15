@@ -210,7 +210,7 @@ enum priorityRangeMenuOption : uint8_t {
 };
 uint8_t priorityRangeSelection=PRIORITY_RANGE_ANY;
 
-struct Sequence *seqAPtr = &sequence_cbda_400;
+struct Sequence *seqAPtr = &sequence_dnb;
 struct Sequence *seqBPtr = &sequence_cbda_200;
 struct Sequence *seqCPtr = &sequence_cbda_100;
 struct Sequence *seqDPtr = &sequence_cbda_050;

@@ -37,15 +37,15 @@ class Sequence_dnb : public Sequence {
       uint8_t p = PRIORITY_MEDIUM;
       this->priorities[p].ticks[0] = &trigger_b;
       this->priorities[p].ticks[23] = &trigger_d;
-      this->priorities[p].ticks[61] = &trigger_c;
-      this->priorities[p].ticks[76] = &trigger_a;
+      this->priorities[p].ticks[59] = &trigger_c;
+      this->priorities[p].ticks[71] = &trigger_a;
 
       // MEDIUM
       p = PRIORITY_LOW;
       this->priorities[p].ticks[0] = &trigger_bc_large;
       this->priorities[p].ticks[23] = &trigger_ad;
-      this->priorities[p].ticks[61] = &trigger_bc_small;
-      this->priorities[p].ticks[76] = &trigger_ad;
+      this->priorities[p].ticks[59] = &trigger_bc_small;
+      this->priorities[p].ticks[71] = &trigger_ad;
     }
 };
 
