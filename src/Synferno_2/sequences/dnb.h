@@ -6,8 +6,6 @@
 #define SEQUENCE_TITLE_DNB "DnB"
 
 class Sequence_dnb : public Sequence {
-  struct TickData trigger_all_large;
-  struct TickData trigger_all_small;
   struct TickData trigger_ad;
   struct TickData trigger_bc_large;
   struct TickData trigger_bc_small;

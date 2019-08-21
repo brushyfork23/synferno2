@@ -11,6 +11,7 @@
 #include "sequences/a_b_c_d_050.h"
 #include "sequences/d_c_b_a_050.h"
 #include "sequences/dnb.h"
+#include "sequences/tripplets.h"
 
 class Sequences {
   public:

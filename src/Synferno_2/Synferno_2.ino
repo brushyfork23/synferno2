@@ -262,6 +262,7 @@ SELECT(seqAPtr,seqAMenu,"Seq1",configUpdate,Menu::exitEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,Menu::doNothing,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,Menu::doNothing,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_TRIPPLETS,&sequence_tripplets,Menu::doNothing,Menu::noEvent)
 );
 
 SELECT(seqBPtr,seqBMenu,"Seq2",configUpdate,Menu::exitEvent,Menu::noStyle
@@ -273,6 +274,7 @@ SELECT(seqBPtr,seqBMenu,"Seq2",configUpdate,Menu::exitEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,Menu::doNothing,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,Menu::doNothing,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_TRIPPLETS,&sequence_tripplets,Menu::doNothing,Menu::noEvent)
 );
 
 SELECT(seqCPtr,seqCMenu,"Seq3",configUpdate,Menu::exitEvent,Menu::noStyle
@@ -284,6 +286,7 @@ SELECT(seqCPtr,seqCMenu,"Seq3",configUpdate,Menu::exitEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,Menu::doNothing,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,Menu::doNothing,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_TRIPPLETS,&sequence_tripplets,Menu::doNothing,Menu::noEvent)
 );
 
 SELECT(seqDPtr,seqDMenu,"Seq4",configUpdate,Menu::exitEvent,Menu::noStyle
@@ -295,6 +298,7 @@ SELECT(seqDPtr,seqDMenu,"Seq4",configUpdate,Menu::exitEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,Menu::doNothing,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,Menu::doNothing,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_TRIPPLETS,&sequence_tripplets,Menu::doNothing,Menu::noEvent)
 );
 
 SELECT(seqEPtr,seqEMenu,"Seq5",configUpdate,Menu::exitEvent,Menu::noStyle
@@ -306,15 +310,16 @@ SELECT(seqEPtr,seqEMenu,"Seq5",configUpdate,Menu::exitEvent,Menu::noStyle
   ,VALUE(SEQUENCE_TITLE_A_B_C_D_050,&sequence_a_b_c_d_050,Menu::doNothing,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_D_C_B_A_050,&sequence_d_c_b_a_050,Menu::doNothing,Menu::noEvent)
   ,VALUE(SEQUENCE_TITLE_DNB,&sequence_dnb,Menu::doNothing,Menu::noEvent)
+  ,VALUE(SEQUENCE_TITLE_TRIPPLETS,&sequence_tripplets,Menu::doNothing,Menu::noEvent)
 );
 
 MENU(mainMenu,"   SYNFERNO",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,SUBMENU(modeMenu)
   ,FIELD(bpm,"BPM     ","",0.0,300.0,1.0,0.1,onBPMMenuUpdate,Menu::exitEvent,Menu::noStyle)
   ,FIELD(offset,"Offset  ","",0,23,1,0,configUpdate,Menu::exitEvent,Menu::wrapStyle)
   ,FIELD(longDuration,"Big poof","",1,23,1,0,onLongDurationMenuUpdate,Menu::exitEvent,Menu::noStyle)
   ,FIELD(shortDuration,"Lil poof","",1,23,1,0,onShortDurationMenuUpdate,Menu::exitEvent,Menu::noStyle)
   ,SUBMENU(priorityRangeMenu)
-  ,SUBMENU(modeMenu)
   ,SUBMENU(seqAMenu)
   ,SUBMENU(seqBMenu)
   ,SUBMENU(seqCMenu)
@@ -326,14 +331,14 @@ MENU(mainMenu,"   SYNFERNO",Menu::doNothing,Menu::noEvent,Menu::noStyle
 
 result selectMidi() {
   // Disable manual BPM setting
-  mainMenu[0].enabled=disabledStatus;
+  mainMenu[1].enabled=disabledStatus;
   fireMarshal.clear();
   return configUpdate();
 }
 
 result selectManual() {
   // Enable manual BPM setting
-  mainMenu[0].enabled=enabledStatus;
+  mainMenu[1].enabled=enabledStatus;
   manualBeat.resetCounter();
   if (bpm == 0.0) {
     setBpm(120.0);
@@ -390,7 +395,7 @@ void setup() {
 
   // configure Menu
   nav.showTitle=false;
-  mainMenu[0].enabled=disabledStatus;
+  mainMenu[1].enabled=disabledStatus;
 
   // fire up MIDI
   midi.begin();
