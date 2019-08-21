@@ -11,6 +11,33 @@ void Sequence::init()
     this->populateTickData();
 
     this->populateMinimumRequirementsForTriggers();
+
+    this->determinePopulatedPriorities();
+}
+
+void Sequence::determinePopulatedPriorities() {
+    uint8_t p = PRIORITY_LOW;
+    uint8_t i = 0;
+    while(!this->priorities[p].ticks[i]) {
+        i++;
+        if (i >= MAX_TICKS) {
+            i = 0;
+            p++;
+        }
+    }
+    this->lowestPopulatedPriority = p;
+
+    i = MAX_TICKS - 1;
+    p = PRIORITY_HIGH;
+    while(!this->priorities[p].ticks[i]) {
+        if (i == 0) {
+            i = MAX_TICKS - 1;
+            p--;
+        } else {
+            i--;
+        }
+    }
+    this->highestPopulatedPriority = p;
 }
 
 void Sequence::populateMinimumRequirementsForTriggers() {
@@ -94,9 +121,19 @@ TickTriggers Sequence::getTickTriggers(uint8_t tickIndex, trigger_priority min, 
     if (min > p) {
         p = min;
     }
+    if (p < this->lowestPopulatedPriority) {
+        p = this->lowestPopulatedPriority;
+    }
     if (max < p) {
         p = max;
     }
+    if (p > this->highestPopulatedPriority) {
+        p = this->highestPopulatedPriority;
+    }
+
+    // if there are no triggers for this prirotiy (like maybe we only set
+    // stuff for MEDIUM but now we're in HIGH), move to a priority we _do_ have.
+    //this->ticksRequiredForAllLongPoofs
 
     if (this->priorities[p].ticks[tickIndex]) {
         triggerA = this->priorities[p].ticks[tickIndex]->channels[0];

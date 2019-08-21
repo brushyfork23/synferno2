@@ -54,9 +54,11 @@ class Sequence {
     trigger_priority priorityRangeMin = PRIORITY_LOW, priorityRangeMax = PRIORITY_HIGH;
     uint8_t ticksRequiredForAllLongPoofs[N_PRIORITIES];
     uint8_t ticksRequiredForAllShortPoofs[N_PRIORITIES];
+    uint8_t lowestPopulatedPriority, highestPopulatedPriority;
     
     virtual void populateTickData() = 0;
     void populateMinimumRequirementsForTriggers();
+    void determinePopulatedPriorities();
 
     
 };
