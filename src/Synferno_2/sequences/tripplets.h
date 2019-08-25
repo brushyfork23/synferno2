@@ -3,10 +3,13 @@
 
 #include "../sequence.h"
 
-#define SEQUENCE_TITLE_TRIPPLETS "Tripplets"
+#define SEQUENCE_TITLE_TRIPPLETS "3x"
 
 class Sequence_tripplets : public Sequence {
   struct TickData trigger_all;
+  struct TickData trigger_b;
+  struct TickData trigger_c;
+  struct TickData trigger_ad;
     
   public: 
     void populateTickData() {
@@ -16,11 +19,24 @@ class Sequence_tripplets : public Sequence {
       trigger_all.channels[2] = DURATION_LONG;
       trigger_all.channels[3] = DURATION_LONG;
 
-      // HIGH
-      uint8_t p = PRIORITY_HIGH;
+      trigger_b.channels[1] = DURATION_LONG;
+
+      trigger_c.channels[2] = DURATION_LONG;
+
+      trigger_ad.channels[0] = DURATION_LONG;
+      trigger_ad.channels[3] = DURATION_LONG;
+
+      // LOW
+      uint8_t p = PRIORITY_LOW;
       this->priorities[p].ticks[0] = &trigger_all;
       this->priorities[p].ticks[31] = &trigger_all;
       this->priorities[p].ticks[63] = &trigger_all;
+
+      // MEDIUM
+      p = PRIORITY_MEDIUM;
+      this->priorities[p].ticks[0] = &trigger_b;
+      this->priorities[p].ticks[31] = &trigger_c;
+      this->priorities[p].ticks[63] = &trigger_ad;
     }
 };
 

@@ -3,7 +3,7 @@
 
 #include "../sequence.h"
 
-#define SEQUENCE_TITLE_CBDA_025 "CBDA .25"
+#define SEQUENCE_TITLE_CBDA_025 ".25x"
 
 class Sequence_cbda_025 : public Sequence {
   struct TickData trigger_all;
