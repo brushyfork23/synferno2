@@ -146,6 +146,7 @@ Solenoid fireA, fireB, fireC, fireD;
 #define BTN_FIRE_ALL_PIN 36
 #define BTN_ZERO_PIN 39
 #define BTN_TAP_PIN 40
+#define BTN_FIRE_ALL_ALT_PIN 52
 #define LED_FIRE_0_PIN 2
 #define LED_FIRE_1_PIN 3
 #define LED_FIRE_2_PIN 4
@@ -153,6 +154,7 @@ Solenoid fireA, fireB, fireC, fireD;
 #define LED_ZERO_PIN 6
 #define LED_TAP_PIN 12
 Button fireAllNow;
+Button fireAllNowAlt;
 Button fireANow;
 Button fireBNow;
 Button fireCNow;
@@ -201,6 +203,7 @@ int shortDuration=4; // Number of clock ticks per beat to fire for a little poof
 float bpm=120.0;
 int offset=0; // Number of clock ticks early to trigger the next beat
 int mode=MODE_MIDI;
+boolean remoteFireEnabled = false;
 enum priorityRangeMenuOption : uint8_t {
   PRIORITY_RANGE_ANY = 0,
   PRIORITY_RANGE_GT_LOW,
@@ -245,12 +248,17 @@ TOGGLE(mode,modeMenu,"Mode     ",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,VALUE("Manual",MODE_MANUAL,selectManual,Menu::noEvent)
 );
 
-SELECT(priorityRangeSelection,priorityRangeMenu,"Pri    ",configUpdate,Menu::exitEvent,Menu::noStyle
+TOGGLE(remoteFireEnabled,remoteMenu,"Remote   ",Menu::doNothing,Menu::noEvent,Menu::noStyle
+  ,VALUE("Off",false,Menu::doNothing,Menu::noEvent)
+  ,VALUE("On",true,Menu::doNothing,Menu::noEvent)
+);
+
+SELECT(priorityRangeSelection,priorityRangeMenu,"Poof Freq ",configUpdate,Menu::exitEvent,Menu::noStyle
   ,VALUE("Any",PRIORITY_RANGE_ANY,Menu::doNothing,Menu::noEvent)
-  ,VALUE(">= Med",PRIORITY_RANGE_GT_LOW,Menu::doNothing,Menu::noEvent)
-  ,VALUE("Low",PRIORITY_RANGE_LOW,Menu::doNothing,Menu::noEvent)
-  ,VALUE("Medium",PRIORITY_RANGE_MEDIUM,Menu::doNothing,Menu::noEvent)
-  ,VALUE("High",PRIORITY_RANGE_HIGH,Menu::doNothing,Menu::noEvent)
+  ,VALUE("> Max",PRIORITY_RANGE_GT_LOW,Menu::doNothing,Menu::noEvent)
+  ,VALUE("Max",PRIORITY_RANGE_LOW,Menu::doNothing,Menu::noEvent)
+  ,VALUE("Mid",PRIORITY_RANGE_MEDIUM,Menu::doNothing,Menu::noEvent)
+  ,VALUE("Low",PRIORITY_RANGE_HIGH,Menu::doNothing,Menu::noEvent)
 );
 
 SELECT(seqAPtr,seqAMenu,"Seq1",configUpdate,Menu::exitEvent,Menu::noStyle
@@ -320,6 +328,7 @@ MENU(mainMenu,"   SYNFERNO",Menu::doNothing,Menu::noEvent,Menu::noStyle
   ,SUBMENU(seqCMenu)
   ,SUBMENU(seqDMenu)
   ,SUBMENU(seqEMenu)
+  ,SUBMENU(remoteMenu)
 );
 
 #define MAX_DEPTH 2
@@ -404,6 +413,7 @@ void setup() {
   // buttons
   // make fire now
   fireAllNow.begin(BTN_FIRE_ALL_PIN);
+  fireAllNowAlt.begin(BTN_FIRE_ALL_ALT_PIN);
   fireANow.begin(BTN_FIRE_0_PIN);
   analogWrite(LED_FIRE_0_PIN, BRIGHTNESS_DIM_RED);
   pinMode(LED_FIRE_0_PIN, OUTPUT);
@@ -510,11 +520,14 @@ void loop() {
   // 6. Handle poofers.
   // provide the fire marshal with the most up-to-date button and counter states
   fireAllNow.update();
+  fireAllNowAlt.update();
   fireANow.update();
   fireBNow.update();
   fireCNow.update();
   fireDNow.update();
   fireMarshal.setManualAll(fireAllNow.getState());
+  fireMarshal.setManualAllAlt(fireAllNowAlt.getState());
+  fireMarshal.setManualAllAltEnabled(remoteFireEnabled);
   fireMarshal.setManualA(fireANow.getState());
   fireMarshal.setManualB(fireBNow.getState());
   fireMarshal.setManualC(fireCNow.getState());

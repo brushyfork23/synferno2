@@ -33,10 +33,10 @@ void FireMarshal::update() {
          this->ticksLeftToFireD = this->shortPoofTicks;
     }
 
-    this->fireStateA = this->manualAll || this->manualA || this->ticksLeftToFireA > 0;
-    this->fireStateB = this->manualAll || this->manualB || this->ticksLeftToFireB > 0;
-    this->fireStateC = this->manualAll || this->manualC || this->ticksLeftToFireC > 0;
-    this->fireStateD = this->manualAll || this->manualD || this->ticksLeftToFireD > 0;
+    this->fireStateA = this->manualAll || (this->manualAllAltEnabled && this->manualAllAlt) || this->manualA || this->ticksLeftToFireA > 0;
+    this->fireStateB = this->manualAll || (this->manualAllAltEnabled && this->manualAllAlt) || this->manualB || this->ticksLeftToFireB > 0;
+    this->fireStateC = this->manualAll || (this->manualAllAltEnabled && this->manualAllAlt) || this->manualC || this->ticksLeftToFireC > 0;
+    this->fireStateD = this->manualAll || (this->manualAllAltEnabled && this->manualAllAlt) || this->manualD || this->ticksLeftToFireD > 0;
 }
 
 void FireMarshal::tickBeatCounter() {
@@ -55,19 +55,19 @@ void FireMarshal::tickBeatCounter() {
 }
 
 boolean FireMarshal::getFireStateA() {
-    return this->manualAll || this->manualA || ticksLeftToFireA > 0;
+    return this->manualAll || (this->manualAllAltEnabled && this->manualAllAlt) || this->manualA || ticksLeftToFireA > 0;
 }
 
 boolean FireMarshal::getFireStateB() {
-    return this->manualAll || this->manualB || ticksLeftToFireB > 0;
+    return this->manualAll || (this->manualAllAltEnabled && this->manualAllAlt) || this->manualB || ticksLeftToFireB > 0;
 }
 
 boolean FireMarshal::getFireStateC() {
-    return this->manualAll || this->manualC || ticksLeftToFireC > 0;
+    return this->manualAll || (this->manualAllAltEnabled && this->manualAllAlt) || this->manualC || ticksLeftToFireC > 0;
 }
 
 boolean FireMarshal::getFireStateD() {
-    return this->manualAll || this->manualD || ticksLeftToFireD > 0;
+    return this->manualAll || (this->manualAllAltEnabled && this->manualAllAlt) || this->manualD || ticksLeftToFireD > 0;
 }
 
 void FireMarshal::setLongDuration(uint8_t ticksPerPoof) {
@@ -80,6 +80,12 @@ void FireMarshal::setShortDuration(uint8_t ticksPerPoof) {
 
 void FireMarshal::setManualAll(boolean pressed) {
     this->manualAll = pressed;
+}
+void FireMarshal::setManualAllAlt(boolean pressed) {
+    this->manualAllAlt = pressed;
+}
+void FireMarshal::setManualAllAltEnabled(boolean enabled) {
+    this->manualAllAltEnabled = enabled;
 }
 void FireMarshal::setManualA(boolean pressed) {
     this->manualA = pressed;

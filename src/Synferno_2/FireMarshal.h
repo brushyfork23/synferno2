@@ -22,6 +22,8 @@ class FireMarshal {
         void setLongDuration(uint8_t ticksPerPoof);
         void setShortDuration(uint8_t ticksPerPoof);
         void setManualAll(boolean pressed);
+        void setManualAllAlt(boolean pressed);
+        void setManualAllAltEnabled(boolean enabled);
         void setManualA(boolean pressed);
         void setManualB(boolean pressed);
         void setManualC(boolean pressed);
@@ -32,7 +34,7 @@ class FireMarshal {
     private:
 
         Solenoid fireA, fireB, fireC, fireD;
-        boolean manualAll, manualA, manualB, manualC, manualD,
+        boolean manualAll, manualAllAlt, manualAllAltEnabled, manualA, manualB, manualC, manualD,
             fireStateA, fireStateB, fireStateC, fireStateD;
         poof_duration sequenceSizeA, sequenceSizeB, sequenceSizeC, sequenceSizeD;
         uint8_t longPoofTicks, shortPoofTicks,
